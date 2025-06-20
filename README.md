@@ -1,10 +1,10 @@
 # NebulaFlow: Real-Time Event Processing Platform  
-![Architecture Diagram](https://via.placeholder.com/800x400?text=IoT+Pulse+Architecture)  
+ 
 *A scalable platform for ingesting, processing, and visualizing IoT sensor data in real time.*
 
 ---
 
-## 🚀 Elevator Pitch  
+## 🚀 Introduction
 IoT Pulse is a cloud-native platform that ingests simulated IoT sensor data (temperature, humidity), processes it in real time, computes live metrics, triggers alerts, and powers a dynamic dashboard. Ideal for smart-building demos, it showcases end-to-end event-driven architecture with enterprise-grade scalability.
 
 ---
