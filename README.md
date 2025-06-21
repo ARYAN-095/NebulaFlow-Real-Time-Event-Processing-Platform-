@@ -22,3 +22,28 @@ graph LR
     D --> I[Alerting Service]
     I --> J[Prometheus]
     J --> K[Slack/Email]
+```
+
+
+```mermaid
+    flowchart LR
+  subgraph Edge
+    SIM[Node.js Simulator]
+  end
+  subgraph Cloud
+    EMQX[EMQX Broker]
+    Kafka[Kafka Cluster]
+    ksql[ksqlDB Engine]
+    AGG[Aggregation Service]
+    TSDB[TimescaleDB]
+    API[Express + Socket.IO]
+    Graf[Grafana / Alertmanager]
+  end
+  SIM -->|MQTT| EMQX --> SUB[MQTT→Kafka Bridge] --> Kafka
+  Kafka --> ksql --> TSDB
+  Kafka --> AGG --> TSDB
+  TSDB --> API --> Dashboard[Next.js App]
+  Kafka --> API
+  TSDB --> Graf
+  AGG --> Graf
+```
