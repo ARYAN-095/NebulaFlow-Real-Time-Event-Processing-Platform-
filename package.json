@@ -1,0 +1,20 @@
+{
+  "name": "iot-pipeline",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "publish": "node simulator/publisher.js",
+    "bridge": "node bridge/subscriber.js",
+    "consume": "node consumer/kafka-consumer.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "kafka-node": "^5.0.0",
+    "mqtt": "^5.13.1",
+    "pg": "^8.16.2"
+  }
+}
