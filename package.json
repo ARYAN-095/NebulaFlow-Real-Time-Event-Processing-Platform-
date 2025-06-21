@@ -12,9 +12,15 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "cors": "^2.8.5",
     "dotenv": "^16.5.0",
+    "express": "^5.1.0",
     "kafka-node": "^5.0.0",
     "mqtt": "^5.13.1",
-    "pg": "^8.16.2"
+    "pg": "^8.16.2",
+    "recharts": "^2.15.4",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
+    "swr": "^2.3.3"
   }
 }
