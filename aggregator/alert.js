@@ -1,23 +1,42 @@
-const db = require("./db");
-const { WebClient } = require("@slack/web-api");
-const slack = new WebClient("your_slack_token");
+// alert.js
+require('dotenv').config({ path: '../.env' });
+const db = require('./db');
+const { WebClient } = require('@slack/web-api');
+
+if (!process.env.SLACK_TOKEN || !process.env.SLACK_CHANNEL) {
+  console.warn('⚠️ SLACK_TOKEN or SLACK_CHANNEL not set—alerts will only log to console');
+}
+const slack = new WebClient(process.env.SLACK_TOKEN);
 
 async function checkThresholds() {
   const result = await db.pool.query(
     `SELECT * FROM sensor_aggregates WHERE timestamp > NOW() - INTERVAL '2 minutes'`
   );
 
-  result.rows.forEach(row => {
-    if (row.avg_temp > 30) {
-      console.log(`🚨 ALERT: High temperature on ${row.device_id} = ${row.avg_temp}`);
+  for (const row of result.rows) {
+    if (row.avg_temp > 10) {
+      const alertMsg = `🚨 ALERT: High temperature on ${row.device_id} = ${row.avg_temp.toFixed(1)}°C`;
+      console.log(alertMsg);
 
-      // Optional Slack integration
-      slack.chat.postMessage({
-        channel: "#alerts",
-        text: `🔥 Device ${row.device_id} exceeded temperature: ${row.avg_temp.toFixed(1)}°C`,
-      });
+      if (process.env.SLACK_TOKEN && process.env.SLACK_CHANNEL) {
+        try {
+          await slack.chat.postMessage({
+            channel: process.env.SLACK_CHANNEL,
+            text: alertMsg,
+          });
+          console.log('✅ Slack notification sent');
+        } catch (err) {
+          console.error('❌ Failed to send Slack message:', err.message);
+        }
+      }
     }
-  });
+  }
 }
 
-setInterval(checkThresholds, 60_000); // every 1 min
+// Run every minute
+setInterval(checkThresholds, 60_000);
+
+// Also run immediately on start
+checkThresholds().catch(err => {
+  console.error('Alert check failed on startup:', err);
+});

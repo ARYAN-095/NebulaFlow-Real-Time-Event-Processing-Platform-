@@ -23,11 +23,11 @@ services:
   timescaledb:
     image: timescale/timescaledb:latest-pg14
     ports:
-      - "5432:5432"
+      - "5434:5432"
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: iot_data
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: iot
 
   emqx:
     image: emqx/emqx:latest

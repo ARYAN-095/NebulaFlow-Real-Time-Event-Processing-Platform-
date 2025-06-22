@@ -7,47 +7,74 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 
-type Reading = {
-  t: number;
-  temp: number;
-  hum: number;
-};
+type Reading = { t: number; temp: number; hum: number };
 
-const fetcher = (url: string) =>
-  fetch(`${process.env.NEXT_PUBLIC_API_URL}${url}`).then(res => res.json());
+const API_URL = process.env.NEXT_PUBLIC_API_URL!;
+const WS_URL  = process.env.NEXT_PUBLIC_WS_URL!;
 
 let socket: Socket;
+
+/** Authenticated fetcher for SWR */
+const fetcher = (url: string) => {
+  const token = localStorage.getItem('token');
+  if (!token) return Promise.reject(new Error('No auth token'));
+  return fetch(`${API_URL}${url}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(res => {
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  });
+};
 
 export default function LiveChart() {
   const [data, setData] = useState<Reading[]>([]);
 
-  // 1️⃣ Fetch historical data
+  // 1️⃣ Fetch historical data from /api/history (returns { t, temp, hum }[])
   const { data: history, error } = useSWR<Reading[]>(
     '/api/history?since=60',
-    fetcher,
-    { refreshInterval: 0 }
+    fetcher
   );
 
+  // 2️⃣ Initialize with historical data
   useEffect(() => {
-    if (history) setData(history);
+    if (history) {
+      console.log('✅ Historical data:', history);
+      setData(history);
+    }
   }, [history]);
 
-  // 2️⃣ Connect WebSocket once
+  // 3️⃣ Connect WebSocket for real-time "new_reading" events
   useEffect(() => {
-    if (!socket) {
-      socket = io(process.env.NEXT_PUBLIC_WS_URL!);
-    }
+    const token = localStorage.getItem('token');
+    if (!token) return;
 
-    socket.on('new_reading', (msg: Reading) => {
-      setData(prev => [...prev.slice(-99), msg]);
+    socket = io(WS_URL, {
+      auth: { token },
+      transports: ['websocket'] // force websocket
     });
+
+    socket.on('connect_error', err => {
+      console.error('Socket connection error:', err.message);
+    });
+
+    socket.on('new_reading', (msg: any) => {
+      // msg should be { t, temp, hum }
+      const reading: Reading = {
+        t: Number(msg.t),
+        temp: Number(msg.temp),
+        hum:  Number(msg.hum),
+      };
+      console.log('📡 New reading:', reading);
+      setData(prev => [...prev.slice(-99), reading]);
+    });
+
     return () => {
-      socket.off('new_reading');
+      socket.disconnect();
     };
   }, []);
 
-  if (error) return <p className="text-red-500">Failed to load data</p>;
-  if (!history) return <p>Loading historical data…</p>;
+  if (error) return <p className="text-red-500">Error: {error.message}</p>;
+  if (!history) return <p>Loading…</p>;
 
   return (
     <div className="w-full h-[400px]">
@@ -56,28 +83,15 @@ export default function LiveChart() {
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             dataKey="t"
-            tickFormatter={t => new Date(t).toLocaleTimeString()}
+            type="number"
             domain={['auto', 'auto']}
+            tickFormatter={t => new Date(t).toLocaleTimeString()}
           />
           <YAxis />
-          <Tooltip
-            labelFormatter={t => new Date(t).toLocaleTimeString()}
-          />
+          <Tooltip labelFormatter={t => new Date(t).toLocaleTimeString()} />
           <Legend />
-          <Line
-            type="monotone"
-            dataKey="temp"
-            name="Temperature (°C)"
-            dot={false}
-            stroke="red"
-          />
-          <Line
-            type="monotone"
-            dataKey="hum"
-            name="Humidity (%)"
-            dot={false}
-            stroke="blue"
-          />
+          <Line dataKey="temp" name="Temperature (°C)" stroke="#f97316" dot={false} />
+          <Line dataKey="hum"  name="Humidity (%)"     stroke="#3b82f6" dot={false} />
         </LineChart>
       </ResponsiveContainer>
     </div>

@@ -1,14 +1,13 @@
-const { Client } = require('pg');
+const { Pool } = require('pg');
 require('dotenv').config({ path: '../.env' });
 
-const client = new Client({
+const pool = new Pool({
   host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
+  port: Number(process.env.DB_PORT),
   database: process.env.DB_NAME,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
 });
-
 
 console.log("🛠 DB config", {
   host: process.env.DB_HOST,
@@ -16,8 +15,7 @@ console.log("🛠 DB config", {
   password: typeof process.env.DB_PASSWORD,
 });
 
-
-client.connect();
+pool.connect();
 
 async function getRecentData(minutes) {
   const query = `
@@ -26,7 +24,7 @@ async function getRecentData(minutes) {
     WHERE timestamp > extract(epoch from now() - interval '${minutes} minutes') * 1000
     ORDER BY timestamp ASC
   `;
-  const { rows } = await client.query(query);
+  const { rows } = await pool.query(query);
   return rows.map(r => ({
     t: Number(r.timestamp),
     temp: r.temperature,
@@ -34,4 +32,8 @@ async function getRecentData(minutes) {
   }));
 }
 
-module.exports = { getRecentData };
+module.exports = {
+  pool,
+  getRecentData
+};
+
