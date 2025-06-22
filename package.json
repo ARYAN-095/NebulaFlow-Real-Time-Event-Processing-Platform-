@@ -5,7 +5,8 @@
   "scripts": {
     "publish": "node simulator/publisher.js",
     "bridge": "node bridge/subscriber.js",
-    "consume": "node consumer/kafka-consumer.js"
+    "consume": "node consumer/kafka-consumer.js",
+    "server": "node api/server.js"
   },
   "keywords": [],
   "author": "",
@@ -23,6 +24,7 @@
     "kafka-node": "^5.0.0",
     "kafkajs": "^2.2.4",
     "mqtt": "^5.13.1",
+    "nodemon": "^3.1.10",
     "pg": "^8.16.2",
     "pg-format": "^1.0.4",
     "recharts": "^2.15.4",

@@ -12,6 +12,8 @@ const { getRecentData, pool } = require('./db');
 const { startKafkaConsumer } = require('./kafka-consumer');
 
 const app = express();
+app.use(express.json());
+
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: '*' },
@@ -51,6 +53,64 @@ app.use(async (req, res, next) => {
     res.status(401).json({ error: 'Unauthorized' });
   }
 });
+
+
+// List devices for this tenant
+app.get('/api/devices', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT device_id, label, created_at
+       FROM devices
+       WHERE tenant_id = current_setting('app.tenant_id')
+       ORDER BY created_at DESC`
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('❌ GET /api/devices error:', err.message);
+    res.status(500).json({ error: 'Could not fetch devices' });
+  }
+});
+
+// Add a new device
+app.post('/api/devices', async (req, res) => {
+  const { device_id, label } = req.body;
+  if (!device_id) return res.status(400).json({ error: 'device_id is required' });
+
+  if ( !label) {
+    return res.status(400).json({ error: 'label required' });
+  }
+
+  try {
+    await pool.query(
+      `INSERT INTO devices(device_id, tenant_id, label)
+       VALUES ($1, current_setting('app.tenant_id'), $2)`,
+      [device_id, label || null]
+    );
+    res.status(201).end();
+  } catch (err) {
+    console.error('❌ POST /api/devices error:', err.message);
+    res.status(500).json({ error: 'Could not add device' });
+  }
+});
+
+// Remove a device
+app.delete('/api/devices/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query(
+      `DELETE FROM devices
+       WHERE device_id = $1
+         AND tenant_id = current_setting('app.tenant_id')`,
+      [id]
+    );
+    res.status(204).end();
+  } catch (err) {
+    console.error('❌ DELETE /api/devices/:id error:', err.message);
+    res.status(500).json({ error: 'Could not delete device' });
+  }
+});
+
+
 
 // 4️⃣ Protected REST route to get recent data
 app.get('/api/history', async (req, res) => {
