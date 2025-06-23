@@ -24,12 +24,14 @@
     "kafka-node": "^5.0.0",
     "kafkajs": "^2.2.4",
     "mqtt": "^5.13.1",
+    "node-fetch": "^2.7.0",
     "nodemon": "^3.1.10",
     "pg": "^8.16.2",
     "pg-format": "^1.0.4",
     "recharts": "^2.15.4",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
-    "swr": "^2.3.3"
+    "swr": "^2.3.3",
+    "yargs": "^18.0.0"
   }
 }

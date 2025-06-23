@@ -8,7 +8,7 @@ if (!process.env.JWT_SECRET) {
 }
 
 const token = jwt.sign(
-  { sub: 'user1', tenant_id: 'tenant-1' },
+  { sub: 'user1', tenant_id: 'tenant-2' },
   process.env.JWT_SECRET,
   { expiresIn: '1h' }
 );

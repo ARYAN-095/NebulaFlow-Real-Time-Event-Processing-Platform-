@@ -15,36 +15,34 @@ export default function DeviceManager() {
   const [token, setToken] = useState('');
   const [error, setError] = useState('');
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL;
+  const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
-  // ✅ Load token from localStorage (only in browser)
+  // Load token from localStorage in browser
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const storedToken = localStorage.getItem('token');
-      if (storedToken) setToken(storedToken);
+      const stored = localStorage.getItem('token');
+      if (stored) setToken(stored);
     }
   }, []);
 
-  // ✅ Fetch devices once token is ready
+  // Fetch devices once token is available
   useEffect(() => {
     if (!token) return;
-
-    const fetchDevices = async () => {
+    (async () => {
       try {
         const res = await fetch(`${API_URL}/api/devices`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
         setDevices(data);
-      } catch (err) {
+      } catch {
         setError('Failed to fetch devices');
       }
-    };
-
-    fetchDevices();
+    })();
   }, [token]);
 
   const addDevice = async () => {
+    if (!deviceId || !label) return;
     try {
       const res = await fetch(`${API_URL}/api/devices`, {
         method: 'POST',
@@ -54,56 +52,57 @@ export default function DeviceManager() {
         },
         body: JSON.stringify({ device_id: deviceId, label }),
       });
-
-      if (!res.ok) throw new Error('Add failed');
+      if (!res.ok) throw new Error();
       setDeviceId('');
       setLabel('');
-      // refresh devices
+      // Refresh list
       const res2 = await fetch(`${API_URL}/api/devices`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res2.json();
       setDevices(data);
-    } catch (err) {
+    } catch {
       setError('Failed to add device');
     }
   };
 
   return (
     <div className="p-4 border rounded shadow bg-white">
-      <h2 className="border p-1 mr-2 text-gray-800 bg-white hover:border-blue-500 focus:border-blue-500 focus:outline-none">🧩 Devices</h2>
+      <h2 className="text-xl font-semibold mb-4 text-gray-800">🧩 Devices</h2>
 
-      <ul className="mb-4">
-        {devices.map((d) => (
-          <li key={d.device_id}>
+      {error && <p className="text-red-500 mb-2">{error}</p>}
+
+      <ul className="mb-4 space-y-2">
+        {devices.map(d => (
+          <li key={d.device_id} className="text-gray-700">
             <strong>{d.device_id}</strong> — {d.label}
           </li>
         ))}
       </ul>
 
-      <input
-  type="text"
-  placeholder="Device ID"
-  value={deviceId}
-  onChange={(e) => setDeviceId(e.target.value)}
-  className="border p-1 mr-2 text-gray-800"  // Added text-gray-800
-/>
-<input
-  type="text"
-  placeholder="Label"
-  value={label}
-  onChange={(e) => setLabel(e.target.value)}
-  className="border p-1 mr-2 text-gray-800"  // Added text-gray-800
-/>
-      <button
-        onClick={addDevice}
-        className="bg-blue-600 text-white px-3 py-1 rounded"
-        disabled={!deviceId || !label}
-      >
-        ➕ Add Device
-      </button>
-
-      {error && <p className="text-red-500 mt-2">{error}</p>}
+      <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
+        <input
+          type="text"
+          placeholder="Device ID"
+          value={deviceId}
+          onChange={e => setDeviceId(e.target.value)}
+          className="border p-2 flex-1 text-gray-800 rounded"
+        />
+        <input
+          type="text"
+          placeholder="Label"
+          value={label}
+          onChange={e => setLabel(e.target.value)}
+          className="border p-2 flex-1 text-gray-800 rounded"
+        />
+        <button
+          onClick={addDevice}
+          disabled={!deviceId || !label}
+          className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+        >
+          ➕ Add Device
+        </button>
+      </div>
     </div>
   );
 }

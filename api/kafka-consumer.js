@@ -4,52 +4,63 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const { KafkaClient, Consumer } = require('kafka-node');
 
-// Load and validate environment variables
-const kafkaHost = process.env.KAFKA_BROKER;
-const topic     = process.env.KAFKA_TOPIC;
-
-if (!kafkaHost || !topic) {
-  console.error('❌ Missing required env vars: KAFKA_BROKER or KAFKA_TOPIC');
-  process.exit(1);
-}
-
+/**
+ * Starts a Kafka consumer that pushes readings to Socket.IO clients.
+ * @param {import('socket.io').Server} io
+ */
 function startKafkaConsumer(io) {
-  const client = new KafkaClient({ kafkaHost });
+  const kafkaHost = process.env.KAFKA_BROKER;
+  const topic     = process.env.KAFKA_TOPIC;
 
+  if (!kafkaHost || !topic) {
+    console.error('❌ Missing env vars: KAFKA_BROKER or KAFKA_TOPIC');
+    process.exit(1);
+  }
+
+  const client   = new KafkaClient({ kafkaHost });
   const consumer = new Consumer(
     client,
     [{ topic, partition: 0 }],
-    { autoCommit: true }
+    { autoCommit: true, fromOffset: 'latest' }
   );
 
   consumer.on('message', msg => {
+    let data;
     try {
-      const { timestamp, temperature, humidity } = JSON.parse(msg.value);
-
-      if (!timestamp || temperature === undefined || humidity === undefined) {
-        console.warn('⚠️ Incomplete Kafka message payload:', msg.value);
-        return;
-      }
-
-      io.emit('new_reading', {
-        t: timestamp,
-        temp: temperature,
-        hum: humidity
-      });
+      data = JSON.parse(msg.value);
     } catch (err) {
-      console.error('❌ Error parsing Kafka message:', err.message);
+      console.error('❌ Error parsing Kafka message JSON:', err.message);
+      return;
     }
+
+    const { deviceId, tenant_id, timestamp, temperature, humidity } = data;
+
+    // Validate required fields
+    if (!deviceId || !tenant_id || !timestamp || temperature == null || humidity == null) {
+      console.warn('⚠️ Incomplete payload, skipping:', data);
+      return;
+    }
+
+    // Build the payload your frontend expects
+    const payload = {
+      deviceId,
+      t: timestamp,
+      temp: temperature,
+      hum: humidity
+    };
+
+    // Emit only to sockets belonging to this tenant
+    // io.sockets.sockets is a Map in Socket.IO v4
+    io.sockets.sockets.forEach(socket => {
+      if (socket.tenantId === tenant_id) {
+        socket.emit('new_reading', payload);
+      }
+    });
   });
 
-  consumer.on('message', msg => {
-  const data = JSON.parse(msg.value);
-  // Only emit to sockets matching this tenant
-  io.sockets.sockets.forEach(socket => {
-    if (socket.tenantId === data.tenant_id) {
-      socket.emit('new_reading', { t: data.timestamp, temp: data.temperature, hum: data.humidity });
-    }
+  consumer.on('error', err => {
+    console.error('❌ Kafka consumer error:', err.message);
   });
-});
 
   console.log(`✅ Kafka consumer started for topic "${topic}"`);
 }

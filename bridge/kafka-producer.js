@@ -1,4 +1,6 @@
 // kafka-producer.js
+require('events').EventEmitter.defaultMaxListeners = 20;
+
 require('dotenv').config();
 const { KafkaClient, Producer } = require('kafka-node');
 
