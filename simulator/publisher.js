@@ -2,52 +2,69 @@
 require('dotenv').config();
 const mqtt  = require('mqtt');
 const fetch = require('node-fetch');
-const jwt   = require('jsonwebtoken');
 const yargs = require('yargs/yargs');
 const { hideBin } = require('yargs/helpers');
 
 const {
   MQTT_BROKER_URL = 'mqtt://localhost:1883',
-  API_URL          = 'http://localhost:5000'
+  API_URL          = 'http://localhost:5000',
+  MASTER_KEY       = ''
 } = process.env;
 
-// 1️⃣ Parse token from CLI or env
+// 1️⃣ Parse tenant from CLI or env
 const argv = yargs(hideBin(process.argv))
-  .option('token', { alias: 't', type: 'string', describe: 'Tenant JWT' })
+  .option('tenant', {
+    alias: 't',
+    type: 'string',
+    describe: 'Tenant ID to simulate',
+    demandOption: true
+  })
   .help().argv;
 
-const SIM_TOKEN = argv.token || process.env.SIM_TOKEN;
-if (!SIM_TOKEN) {
-  console.error('❌ Please provide a token via --token or SIM_TOKEN env');
-  process.exit(1);
-}
+const TENANT_ID = argv.tenant;
 
-// 2️⃣ Decode to get tenant_id
-let decoded;
-try {
-  decoded = jwt.decode(SIM_TOKEN);
-  if (!decoded?.tenant_id) throw new Error();
-} catch {
-  console.error('❌ Invalid JWT, cannot extract tenant_id');
-  process.exit(1);
-}
-const TENANT_ID = decoded.tenant_id;
-console.log(`🔑 Simulating for tenant_id="${TENANT_ID}"`);
-
-// 3️⃣ Fetch devices for this tenant
-async function fetchDevices() {
-  const res = await fetch(`${API_URL}/api/devices`, {
-    headers: { Authorization: `Bearer ${SIM_TOKEN}` }
+// 2️⃣ Fetch a JWT for this tenant
+async function fetchToken() {
+  const res = await fetch(`${API_URL}/api/generate-token`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-master-key': MASTER_KEY
+    },
+    body: JSON.stringify({ tenant_id: TENANT_ID })
   });
-  if (!res.ok) throw new Error(`GET /api/devices returned ${res.status}`);
+  if (!res.ok) {
+    throw new Error(`Token endpoint returned ${res.status}`);
+  }
+  const { token } = await res.json();
+  return token;
+}
+
+// 3️⃣ Fetch the devices for this tenant
+async function fetchDevices(token) {
+  const res = await fetch(`${API_URL}/api/devices`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!res.ok) {
+    throw new Error(`GET /api/devices returned ${res.status}`);
+  }
   return res.json(); // [{ device_id, label, created_at }, ...]
 }
 
-// 4️⃣ Start the MQTT publisher
+// 4️⃣ Start publishing loop
 async function start() {
-  const devices = await fetchDevices();
+  if (!MASTER_KEY) {
+    console.error('❌ MASTER_KEY env is required');
+    process.exit(1);
+  }
+
+  console.log(`🔑 Requesting token for tenant_id="${TENANT_ID}"`);
+  const token = await fetchToken();
+  console.log('✅ Received token');
+
+  const devices = await fetchDevices(token);
   if (!devices.length) {
-    console.error('❌ No devices registered—please add one in the UI first.');
+    console.error('❌ No devices registered—add one in the UI first.');
     process.exit(1);
   }
   console.log('🧩 Devices to simulate:', devices.map(d => d.device_id).join(', '));
@@ -76,7 +93,7 @@ async function start() {
   }, 2000);
 
   client.on('error', err => {
-    console.error('MQTT Error:', err.message);
+    console.error('❌ MQTT Error:', err.message);
     client.end();
   });
 }

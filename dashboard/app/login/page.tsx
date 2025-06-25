@@ -1,61 +1,100 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import useSWR from 'swr';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL!;
+const MASTER_KEY = process.env.NEXT_PUBLIC_MASTER_KEY!;
+
+const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 export default function LoginPage() {
-  const [tenantId, setTenantId] = useState('');
-  const [error, setError] = useState('');
   const router = useRouter();
+  const { data: tenants, error } = useSWR<string[]>('/api/tenants', url => fetcher(API_URL + url));
+  const [tenant, setTenant] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errMsg, setErrMsg] = useState('');
+  const [hasMounted, setHasMounted] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError('');
+  // Ensure client-side rendering before checking token
+ useEffect(() => {
+  setHasMounted(true);
+
+  const token = localStorage.getItem('token');
+  if (!token) return;
+
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const isExpired = payload.exp * 1000 < Date.now();
+    if (!isExpired && window.location.pathname === '/login') {
+      router.push('/');
+    } else {
+      localStorage.removeItem('token');
+    }
+  } catch (err) {
+    localStorage.removeItem('token');
+  }
+}, [router]);
+
+
+  const handleLogin = async () => {
+    if (!tenant) {
+      setErrMsg('Please select a tenant');
+      return;
+    }
+    setErrMsg('');
+    setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/generate-token`, {
+      const res = await fetch(`${API_URL}/api/generate-token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-master-key': process.env.NEXT_PUBLIC_MASTER_KEY!,
+          'x-master-key': MASTER_KEY,
         },
-        body: JSON.stringify({ tenant_id: tenantId }),
+        body: JSON.stringify({ tenant_id: tenant }),
       });
       if (!res.ok) {
-        const { error } = await res.json();
-        throw new Error(error || res.statusText);
+        const body = await res.json();
+        throw new Error(body.error || res.statusText);
       }
       const { token } = await res.json();
       localStorage.setItem('token', token);
-      router.push('/'); // go to dashboard
-    } catch (err: any) {
-      setError(err.message);
+      router.push('/');
+    } catch (e: any) {
+      setErrMsg(e.message);
+    } finally {
+      setLoading(false);
     }
-  }
+  };
+
+  // ✅ Prevent SSR mismatch
+  if (!hasMounted) return null;
+
+  if (error) return <p className="p-6 text-red-500">Failed to load tenants</p>;
+  if (!tenants) return <p className="p-6">Loading tenants…</p>;
 
   return (
-    <main className="p-6 max-w-md mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Login / Select Tenant</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block mb-1">Tenant ID</label>
-          <input
-            type="text"
-            value={tenantId}
-            onChange={e => setTenantId(e.target.value)}
-            className="w-full border p-2 rounded"
-            placeholder="e.g. tenant-1"
-            required
-          />
-        </div>
-        <button
-          type="submit"
-          className="w-full bg-blue-600 text-white py-2 rounded"
-          disabled={!tenantId}
-        >
-          Get Token &amp; Continue
-        </button>
-        {error && <p className="text-red-500 mt-2">{error}</p>}
-      </form>
-    </main>
+    <div className="max-w-md mx-auto mt-20 p-6 bg-white rounded shadow">
+      <h1 className="text-2xl font-semibold mb-4">Choose your Tenant</h1>
+      <select
+        className="w-full border rounded px-3 py-2 mb-4"
+        value={tenant}
+        onChange={e => setTenant(e.target.value)}
+      >
+        <option value="">— select tenant —</option>
+        {tenants.map(t => (
+          <option key={t} value={t}>{t}</option>
+        ))}
+      </select>
+      {errMsg && <p className="text-red-500 mb-2">{errMsg}</p>}
+      <button
+        onClick={handleLogin}
+        disabled={loading}
+        className="w-full bg-blue-600 text-white py-2 rounded disabled:opacity-50"
+      >
+        {loading ? 'Signing in…' : 'Sign In'}
+      </button>
+    </div>
   );
 }

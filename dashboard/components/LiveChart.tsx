@@ -15,7 +15,6 @@ const WS_URL  = process.env.NEXT_PUBLIC_WS_URL!;
 
 let socket: Socket;
 
-/** Generic authenticated fetcher */
 const fetcher = (url: string) => {
   const token = localStorage.getItem('token');
   if (!token) return Promise.reject(new Error('No auth token'));
@@ -31,26 +30,23 @@ export default function LiveChart() {
   const [selectedDevice, setSelectedDevice] = useState<string>('');
   const [mode, setMode] = useState<'raw' | '1m' | '5m'>('raw');
   const [data, setData] = useState<Reading[]>([]);
+  const [showTemp, setShowTemp] = useState(true);
+  const [showHum, setShowHum] = useState(true);
 
-  // Fetch devices for the dropdown
   const { data: devices } = useSWR<Device[]>('/api/devices', fetcher);
 
-  // Build the API path based on mode
   const path = selectedDevice
     ? mode === 'raw'
       ? `/api/history?since=60&device_id=${selectedDevice}`
       : `/api/aggregates?since=60&window=${mode === '1m' ? '1 minute' : '5 minute'}&device_id=${selectedDevice}`
     : null;
 
-  // Fetch series (history or aggregates)
   const { data: series, error } = useSWR<Reading[]>(path, fetcher);
 
-  // Initialize and update chart data when series changes
   useEffect(() => {
     if (series) setData(series);
   }, [series]);
 
-  // Subscribe to real-time updates only in raw mode
   useEffect(() => {
     if (!selectedDevice || mode !== 'raw') return;
     const token = localStorage.getItem('token');
@@ -82,6 +78,11 @@ export default function LiveChart() {
 
   if (error) return <p className="text-red-500">Error: {error.message}</p>;
 
+  // Build download URL
+  const downloadUrl = selectedDevice
+    ? `${API_URL}/api/aggregates?since=60&window=${mode === 'raw' ? '' : encodeURIComponent(mode === '1m' ? '1 minute' : '5 minute')}&device_id=${selectedDevice}&download=true`
+    : '';
+
   return (
     <div className="space-y-4">
       {/* Device selector */}
@@ -101,26 +102,98 @@ export default function LiveChart() {
         </select>
       </div>
 
-      {/* Mode toggle */}
+      {/* Mode & Download controls */}
       {selectedDevice && (
-        <div className="flex space-x-2 mb-4">
-          {[
-            { key: 'raw', label: 'Raw' },
-            { key: '1m',  label: '1-min Avg' },
-            { key: '5m',  label: '5-min Avg' },
-          ].map(opt => (
-            <button
-              key={opt.key}
-              onClick={() => setMode(opt.key as any)}
-              className={`px-3 py-1 rounded ${
-                mode === opt.key
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-800'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
+        <div className="flex items-center space-x-4 mb-2">
+          {/* Mode toggle */}
+          <div className="flex space-x-2">
+            {[
+              { key: 'raw', label: 'Raw' },
+              { key: '1m',  label: '1-min Avg' },
+              { key: '5m',  label: '5-min Avg' },
+            ].map(opt => (
+              <button
+                key={opt.key}
+                onClick={() => setMode(opt.key as any)}
+                className={`px-3 py-1 rounded ${
+                  mode === opt.key
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-800'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Download CSV */}
+          // Inside your LiveChart component, replace the Download button:
+<button
+  onClick={async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No auth token');
+
+      // Build the same URL, minus download handling in browser
+      const w = mode === '1m'
+        ? '1 minute'
+        : mode === '5m'
+        ? '5 minute'
+        : '';
+      const url = `${API_URL}/api/aggregates?since=60${
+        w ? `&window=${encodeURIComponent(w)}` : ''
+      }&device_id=${selectedDevice}&download=true`;
+
+      // Fetch CSV with Authorization header
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+
+      // Get the CSV as a blob
+      const blob = await res.blob();
+      // Construct a filename
+      const filename = `aggregates_${selectedDevice}_${mode}.csv`;
+      // Create a temporary anchor to trigger download
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+    } catch (err: any) {
+      console.error('CSV download error:', err);
+      alert(`Download error: ${err.message}`);
+    }
+  }}
+  className="ml-auto px-3 py-1 bg-green-600 text-white rounded"
+>
+  Download CSV
+</button>
+
+        </div>
+      )}
+
+      {/* Legend toggles */}
+      {selectedDevice && (
+        <div className="flex gap-4 items-center mb-2">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={showTemp}
+              onChange={() => setShowTemp(prev => !prev)}
+            />
+            <span className="text-orange-500">Temperature</span>
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={showHum}
+              onChange={() => setShowHum(prev => !prev)}
+            />
+            <span className="text-blue-500">Humidity</span>
+          </label>
         </div>
       )}
 
@@ -139,18 +212,30 @@ export default function LiveChart() {
               <YAxis />
               <Tooltip labelFormatter={t => new Date(t).toLocaleTimeString()} />
               <Legend />
-              <Line
-                dataKey="temp"
-                name={mode === 'raw' ? 'Temp (°C)' : `${mode === '1m' ? '1-min' : '5-min'} Temp`}
-                stroke="#f97316"
-                dot={false}
-              />
-              <Line
-                dataKey="hum"
-                name={mode === 'raw' ? 'Hum (%)' : `${mode === '1m' ? '1-min' : '5-min'} Hum`}
-                stroke="#3b82f6"
-                dot={false}
-              />
+              {showTemp && (
+                <Line
+                  dataKey="temp"
+                  name={
+                    mode === 'raw'
+                      ? 'Temp (°C)'
+                      : `${mode === '1m' ? '1-min' : '5-min'} Temp`
+                  }
+                  stroke="#f97316"
+                  dot={false}
+                />
+              )}
+              {showHum && (
+                <Line
+                  dataKey="hum"
+                  name={
+                    mode === 'raw'
+                      ? 'Hum (%)'
+                      : `${mode === '1m' ? '1-min' : '5-min'} Hum`
+                  }
+                  stroke="#3b82f6"
+                  dot={false}
+                />
+              )}
             </LineChart>
           </ResponsiveContainer>
         </div>
