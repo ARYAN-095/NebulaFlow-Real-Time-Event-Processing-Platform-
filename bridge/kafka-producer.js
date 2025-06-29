@@ -7,7 +7,14 @@ const { KafkaClient, Producer } = require('kafka-node');
 const kafkaHost = process.env.KAFKA_BROKER;
 const topic     = process.env.KAFKA_TOPIC;
 
-const client   = new KafkaClient({ kafkaHost });
+const client = new KafkaClient({
+  kafkaHost: process.env.KAFKA_BROKER,
+  connectTimeout: 10000, // 10 seconds
+  requestTimeout: 30000, // 30 seconds
+  autoConnect: true,
+  reconnectOnIdle: true,
+  maxAsyncRequests: 10
+});
 const producer = new Producer(client);
 
 producer.on('ready', () => {
