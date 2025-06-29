@@ -1,0 +1,34 @@
+{
+  "title": "IoT API Overview",
+  "panels": [
+    {
+      "type": "graph",
+      "title": "HTTP Request Rate",
+      "targets": [
+        { "expr": "rate(iot_api_http_requests_total[1m])", "legendFormat": "{{method}} {{path}}"}
+      ],
+      "datasource": "Prometheus",
+      "yaxes": [{ "format": "req/s" }, {}]
+    },
+    {
+      "type": "graph",
+      "title": "Request Latency (p95)",
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum(rate(iot_api_http_request_duration_seconds_bucket[5m])) by (le, method, path))", "legendFormat": "{{method}} {{path}}"}
+      ],
+      "datasource": "Prometheus",
+      "yaxes": [{ "format": "s" }, {}]
+    },
+    {
+      "type": "graph",
+      "title": "CPU Usage",
+      "targets": [
+        { "expr": "rate(iot_api_process_cpu_seconds_total[1m])", "legendFormat": "CPU/sec" }
+      ],
+      "datasource": "Prometheus",
+      "yaxes": [{ "format": "s" }, {}]
+    }
+  ],
+  "schemaVersion": 16,
+  "version": 0
+}

@@ -1,0 +1,20 @@
+groups:
+  - name: iot-api-alerts
+    rules:
+      - alert: HighErrorRate
+        expr: rate(iot_api_http_requests_total{status=~"5.."}[5m]) > 1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High 5xx error rate detected"
+          description: "{{ $value }} errors/sec over the last 5 minutes"
+
+      - alert: SlowRequests
+        expr: histogram_quantile(0.95, sum(rate(iot_api_http_request_duration_seconds_bucket[5m])) by (le)) > 1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High latency on API"
+          description: "P95 latency is above 1s for the last 5m"

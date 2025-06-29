@@ -1,15 +1,43 @@
+// server.js
 require('dotenv').config();
-const express     = require('express');
-const http        = require('http');
-const cors        = require('cors');
-const jwt         = require('express-jwt');
-const jsonwebtoken = require('jsonwebtoken');
-const { verify }  = require('jsonwebtoken');
-const { Server }  = require('socket.io');
-const format      = require('pg-format');
-const Papa = require('papaparse'); 
+const express       = require('express');
+const http          = require('http');
+const cors          = require('cors');
+const jwt           = require('express-jwt');
+const jsonwebtoken  = require('jsonwebtoken');
+const { verify }    = require('jsonwebtoken');
+const { Server }    = require('socket.io');
+const format        = require('pg-format');
+const Papa          = require('papaparse');
+const promClient    = require('prom-client');
+
 const { pool }               = require('./db');
 const { startKafkaConsumer } = require('./kafka-consumer');
+
+////////////////////////////////////////////////////////////////////////////////
+// 1️⃣ Prometheus instrumentation
+
+const register = new promClient.Registry();
+promClient.collectDefaultMetrics({ register, prefix: 'iot_api_' });
+
+const httpRequestsTotal = new promClient.Counter({
+  name: 'iot_api_http_requests_total',
+  help: 'Total number of HTTP requests',
+  labelNames: ['method', 'path', 'status'],
+});
+
+const httpRequestDurationSeconds = new promClient.Histogram({
+  name: 'iot_api_http_request_duration_seconds',
+  help: 'Duration of HTTP requests in seconds',
+  labelNames: ['method', 'path', 'status'],
+  buckets: [0.1, 0.3, 1.5, 5, 10],
+});
+
+register.registerMetric(httpRequestsTotal);
+register.registerMetric(httpRequestDurationSeconds);
+
+////////////////////////////////////////////////////////////////////////////////
+// 2️⃣ App & HTTP server setup
 
 const app    = express();
 const server = http.createServer(app);
@@ -18,23 +46,40 @@ const io     = new Server(server, { cors: { origin: '*' } });
 app.use(cors());
 app.use(express.json());
 
-//
-// 0️⃣ Public: Generate a tenant JWT
-//
+////////////////////////////////////////////////////////////////////////////////
+// 3️⃣ Metrics middleware – skip self-instrumentation
+
+app.use((req, res, next) => {
+  if (req.path === '/metrics') return next(); // 🛑 Skip /metrics to avoid recursion
+
+  const end = httpRequestDurationSeconds.startTimer({ method: req.method, path: req.path });
+  res.on('finish', () => {
+    httpRequestsTotal.inc({ method: req.method, path: req.path, status: res.statusCode });
+    end({ method: req.method, path: req.path, status: res.statusCode });
+  });
+  next();
+});
+
+////////////////////////////////////////////////////////////////////////////////
+// 4️⃣ Prometheus metrics endpoint
+
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', register.contentType);
+  res.end(await register.metrics());
+});
+
+////////////////////////////////////////////////////////////////////////////////
+// 5️⃣ Public APIs
+
 app.post('/api/generate-token', (req, res) => {
   const masterKey = req.headers['x-master-key'];
-  console.log('🔐 Provided Master Key:', masterKey);
-  console.log('🔐 Expected Master Key:', process.env.MASTER_KEY);
-
   if (masterKey !== process.env.MASTER_KEY) {
     return res.status(403).json({ error: 'Forbidden' });
   }
-
   const { tenant_id } = req.body;
   if (!tenant_id) {
     return res.status(400).json({ error: 'tenant_id is required' });
   }
-
   const token = jsonwebtoken.sign(
     { sub: `user-${tenant_id}`, tenant_id },
     process.env.JWT_SECRET,
@@ -43,17 +88,13 @@ app.post('/api/generate-token', (req, res) => {
   res.json({ token });
 });
 
-
-// 📒 Add at the top, before any `app.use(jwt(...))`
 app.get('/api/tenants', async (req, res) => {
   try {
-    // Pull distinct tenant IDs from devices table
     const { rows } = await pool.query(`
       SELECT DISTINCT tenant_id
       FROM devices
       ORDER BY tenant_id
     `);
-    // Return as simple array of strings
     res.json(rows.map(r => r.tenant_id));
   } catch (e) {
     console.error('GET /api/tenants error:', e.message);
@@ -61,10 +102,9 @@ app.get('/api/tenants', async (req, res) => {
   }
 });
 
+////////////////////////////////////////////////////////////////////////////////
+// 6️⃣ Auth middleware with JWT
 
-//
-// 1️⃣ Protect HTTP  routes with JWT
-//
 app.use(jwt({
   secret: process.env.JWT_SECRET,
   algorithms: ['HS256'],
@@ -75,7 +115,6 @@ app.use(jwt({
   },
 }));
 
-// 2️⃣ Inject tenant_id for RLS
 app.use(async (req, res, next) => {
   try {
     const tenantId = req.user?.tenant_id;
@@ -83,12 +122,14 @@ app.use(async (req, res, next) => {
     await pool.query(format("SET app.tenant_id = %L", tenantId));
     next();
   } catch (e) {
-    console.error('Auth error:', e.message);
+    console.error('Auth/RLS error:', e.message);
     res.status(401).json({ error: 'Unauthorized' });
   }
 });
 
-// 📦 Device Management
+////////////////////////////////////////////////////////////////////////////////
+// 7️⃣ Device Management
+
 app.get('/api/devices', async (req, res) => {
   try {
     const { rows } = await pool.query(`
@@ -130,16 +171,17 @@ app.delete('/api/devices/:id', async (req, res) => {
     `, [req.params.id]);
     res.status(204).end();
   } catch (e) {
-    console.error('DELETE /api/devices/:id error:', e.message);
+    console.error('DELETE /api/devices error:', e.message);
     res.status(500).json({ error: 'Could not delete device' });
   }
 });
 
-// 🌡️ Sensor Data History API
+////////////////////////////////////////////////////////////////////////////////
+// 8️⃣ Sensor Data APIs
+
 app.get('/api/history', async (req, res) => {
   const minutes  = parseInt(req.query.since || '60', 10);
   const deviceId = req.query.device_id;
-
   const baseSQL = `
     SELECT
       timestamp   AS t,
@@ -149,15 +191,13 @@ app.get('/api/history', async (req, res) => {
     FROM sensor_data
     WHERE timestamp > (EXTRACT(EPOCH FROM NOW()) * 1000) - $1
   `;
-  const params = [ minutes * 60 * 1000 ];
-
+  const params = [minutes * 60 * 1000];
   let sql = baseSQL;
   if (deviceId) {
     sql += ` AND device_id = $2`;
     params.push(deviceId);
   }
   sql += ` ORDER BY timestamp ASC`;
-
   try {
     const { rows } = await pool.query(sql, params);
     res.json(rows);
@@ -167,20 +207,16 @@ app.get('/api/history', async (req, res) => {
   }
 });
 
-
-
 app.get('/api/aggregates', async (req, res) => {
   const minutes  = parseInt(req.query.since || '60', 10);
-  const window   = req.query.window || '1 minute';  // '1 minute' or '5 minute'
+  const window   = req.query.window || '1 minute';
   const deviceId = req.query.device_id;
-  const download = req.query.download === 'true';   // 🆕 CSV trigger
-
-  if (!['1 minute', '5 minute'].includes(window)) {
-    return res.status(400).json({ error: 'Invalid window; must be "1 minute" or "5 minute"' });
+  const download = req.query.download === 'true';
+  if (!['1 minute','5 minute'].includes(window)) {
+    return res.status(400).json({ error: 'Invalid window' });
   }
-
   let sql = `
-    SELECT 
+    SELECT
       time_bucket($1, timestamp) AS t,
       avg(avg_temp)     AS avg_temp,
       avg(avg_humidity) AS avg_humidity,
@@ -189,65 +225,52 @@ app.get('/api/aggregates', async (req, res) => {
     WHERE timestamp > NOW() - INTERVAL '${minutes} minutes'
   `;
   const params = [window];
-
   if (deviceId) {
     sql += ` AND device_id = $2`;
     params.push(deviceId);
   }
-
-  sql += `
-    GROUP BY t, device_id
-    ORDER BY t ASC
-  `;
-
+  sql += ` GROUP BY t, device_id ORDER BY t ASC`;
   try {
     const { rows } = await pool.query(sql, params);
-
     if (download) {
-      // 🆕 CSV export
       const csvData = rows.map(r => ({
-        timestamp: new Date(r.t).toISOString(),
-        device_id: r.device_id,
-        avg_temp:  r.avg_temp?.toFixed(2),
-        avg_humidity: r.avg_humidity?.toFixed(2),
+        timestamp:    new Date(r.t).toISOString(),
+        device_id:    r.device_id,
+        avg_temp:     r.avg_temp.toFixed(2),
+        avg_humidity: r.avg_humidity.toFixed(2),
       }));
-
       const csv = Papa.unparse(csvData);
-      res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', `attachment; filename="aggregates_${deviceId || 'all'}_${window.replace(' ', '')}.csv"`);
+      res.header('Content-Type','text/csv');
+      res.header('Content-Disposition',
+        `attachment; filename="aggregates_${deviceId||'all'}_${window.replace(' ','')}.csv"`);
       return res.send(csv);
     }
-
-    // 📊 JSON for frontend chart
-    const result = rows.map(r => ({
-      t: new Date(r.t).getTime(),
+    res.json(rows.map(r => ({
+      t:  new Date(r.t).getTime(),
       temp: Number(r.avg_temp),
       hum:  Number(r.avg_humidity),
       device_id: r.device_id
-    }));
-    res.json(result);
+    })));
   } catch (e) {
     console.error('GET /api/aggregates error:', e.message);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
+////////////////////////////////////////////////////////////////////////////////
+// 9️⃣ WebSocket auth
 
-
-// 🔐 WebSocket Auth & RLS
 io.use(async (socket, next) => {
   try {
     const token = socket.handshake.auth?.token;
-    if (!token) throw new Error('No token provided');
+    if (!token) throw new Error('No token');
     const payload = verify(token, process.env.JWT_SECRET);
     const tenantId = payload.tenant_id;
-    if (!tenantId) throw new Error('No tenant_id in token');
-
+    if (!tenantId) throw new Error('No tenant_id');
     socket.tenantId = tenantId;
     const client = await pool.connect();
     await client.query(format("SET app.tenant_id = %L", tenantId));
     client.release();
-
     next();
   } catch (e) {
     console.error('Socket auth error:', e.message);
@@ -255,10 +278,11 @@ io.use(async (socket, next) => {
   }
 });
 
-// 🚚 Start Kafka Consumer
 startKafkaConsumer(io);
 
-// 🚀 Start Server
+////////////////////////////////////////////////////////////////////////////////
+// 🔟 Start server
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`🚀 API listening on http://localhost:${PORT}`);

@@ -13,7 +13,7 @@ const config = {
   },
   postgres: {
     host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 5432,
+    port: process.env.DB_PORT || 5434,
     database: process.env.DB_NAME || 'iot',
     user: process.env.DB_USER || 'postgres',
     password: process.env.DB_PASSWORD || '1234'
@@ -44,11 +44,20 @@ async function runConsumer() {
     console.log('✔ Verified sensor_data table exists');
 
     // Kafka consumer setup
-    const client = new KafkaClient({
-      kafkaHost: config.kafka.host,
-      connectTimeout: 10000,
-      requestTimeout: 30000
-    });
+   const client = new KafkaClient({
+  kafkaHost: config.kafka.host,
+  connectTimeout: 60000,
+  requestTimeout: 60000,
+  clientId: 'iot-consumer-' + process.pid,
+  // Add these for better Docker compatibility
+  sslOptions: false,
+  retryOptions: {
+    retries: 5,
+    factor: 2,
+    minTimeout: 1000,
+    maxTimeout: 5000
+  }
+});
 
     const consumer = new Consumer(
       client,
