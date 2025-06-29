@@ -29,6 +29,7 @@ IoT Pulse is a cloud-native platform that ingests simulated IoT sensor data (tem
 
 
 ## 🌐 High-Level Architecture  
+
 ```mermaid
 graph LR
     A[Edge Simulator] -->|MQTT| B(EMQX Broker)
@@ -94,16 +95,19 @@ graph LR
 ```
  
 # 📦 Tech Stack
-
+--------------------------------------------------
+```
 Layer	                      Technology
+---------------------------------------------
 Messaging            	MQTT (EMQX), Apache Kafka
-Time‑Series DB	        TimescaleDB (Postgres)
-API & Auth	          Node.js, Express, Socket.IO, JWT, RLS
+Time‑Series DB	      TimescaleDB (Postgres)
+API & Auth	         Node.js, Express, Socket.IO, JWT, RLS
 Aggregation	             Node.js Consumer & KafkaJS
 Alerting	               Slack Web API
 Frontend              	Next.js, React, SWR, Recharts
 Observability       	prom-client, express‑prom-bundle, Prometheus, Grafana
 Containerization	        Docker, Docker‑Compose
+```
 
 # 🔧 Prerequisites
 Docker & Docker‑Compose
