@@ -73,25 +73,25 @@ graph LR
 
 ```mermaid
 graph TD
-    Simulator["Simulator / Real Sensor"] -->|MQTT| EMQX[EMQX Broker]
-    EMQX --> Bridge[Bridge Service]
-    Bridge --> Kafka[Apache Kafka]
-    Kafka --> Consumer[Consumer]
-    Kafka --> Aggregator[Aggregator]
-    Consumer --> TimescaleRaw[TimescaleDB (raw)]
-    Aggregator --> TimescaleAgg[TimescaleDB (aggregates)]
-    Bridge --> Socket[Socket.IO / API]
-    Socket -->|REST & WebSocket| Dashboard[Next.js Dashboard]
-    Dashboard <--> DeviceManager[DeviceManager UI]
-    Dashboard --> CSV[CSV Export]
+    A[Simulator/Real Sensor] -->|MQTT| B[EMQX Broker]
+    B --> C[Bridge Service]
+    C --> D[Apache Kafka]
+    D --> E[Consumer]
+    D --> F[Aggregator]
+    E --> G[TimescaleDB raw]
+    F --> H[TimescaleDB aggregates]
+    C --> I[Socket.IO/API]
+    I -->|REST & WebSocket| J[Next.js Dashboard]
+    J <--> K[DeviceManager UI]
+    J --> L[CSV Export]
     
-    API -.-> Prometheus[Prometheus]
-    Aggregator -.-> Prometheus
-    Bridge -.-> Prometheus
-    Prometheus --> Grafana[Grafana]
-    TimescaleRaw --> Grafana
-    TimescaleAgg --> Grafana
-    Aggregator --> Slack[SlackAlerts]
+    I -. /metrics .-> M[Prometheus]
+    F -. /metrics .-> M
+    C -. /metrics .-> M
+    M --> N[Grafana]
+    G --> N
+    H --> N
+    F --> O[SlackAlerts]
 ```
  
 # 📦 Tech Stack
