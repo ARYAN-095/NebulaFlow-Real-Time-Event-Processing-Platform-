@@ -1,6 +1,6 @@
 FROM node:18-alpine
 WORKDIR /usr/src/aggregator
-COPY ../package.json ../package-lock.json ./
+COPY package.json package-lock.json ./
 RUN npm ci --production
-COPY . .
+COPY aggregator/. .
 CMD ["node", "index.js"]

@@ -3,7 +3,7 @@ const { Kafka } = require("kafkajs");
 const db = require("./db");
 const { groupAndAverage } = require("./utils");
 
-const kafka = new Kafka({ clientId: "aggregator", brokers: ["localhost:9092"] });
+const kafka = new Kafka({ clientId: "aggregator", brokers: ["kafka:9092"] });
 const consumer = kafka.consumer({ groupId: "aggregator-group" });
 
 async function start() {

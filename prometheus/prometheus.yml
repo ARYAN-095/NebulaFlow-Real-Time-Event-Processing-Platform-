@@ -1,13 +1,15 @@
-global:
-  scrape_interval: 15s
-  evaluation_interval: 15s
-
 scrape_configs:
-  - job_name: 'iot-api'
-    metrics_path: '/metrics'
+  - job_name: 'api-service'
     static_configs:
-      - targets: ['host.docker.internal:5000']   # Adjust host/port if running in Docker
+      - targets: ['api:5000']  # Use Docker service name
 
+  - job_name: 'aggregator'
+    static_configs:
+      - targets: ['aggregator:5000']
+
+  - job_name: 'alerter'
+    static_configs:
+      - targets: ['alerter:5000']
 
 rule_files:
-  - 'alerts.yml'
+  - "alert.yml"

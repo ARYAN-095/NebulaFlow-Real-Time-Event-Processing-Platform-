@@ -1,6 +1,16 @@
-FROM node:18-alpine
+# api/Dockerfile
+
+FROM node:18
+
 WORKDIR /usr/src/api
-COPY ../package.json ../package-lock.json ./
-RUN npm ci --production
-COPY . .
-CMD ["node", "server.js"]
+
+# Copy package.json & lock file from root
+COPY package.json package-lock.json ./
+
+# Install only API-related deps (optional if shared)
+RUN npm install
+
+# Copy ONLY the API folder contents
+COPY api/ ./
+
+CMD [ "node", "server.js" ]

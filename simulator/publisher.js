@@ -6,8 +6,8 @@ const yargs = require('yargs/yargs');
 const { hideBin } = require('yargs/helpers');
 
 const {
-  MQTT_BROKER_URL = 'mqtt://localhost:1883',
-  API_URL          = 'http://localhost:5000',
+  MQTT_BROKER_URL = 'mqtt://emqx:1883',
+  API_URL          = 'http://api:5000',
   MASTER_KEY       = ''
 } = process.env;
 

@@ -4,7 +4,7 @@ const { Client: PgClient } = require('pg');
 
 const config = {
   kafka: {
-    host: process.env.KAFKA_BROKER || 'localhost:9092',
+    host: process.env.KAFKA_BROKER || 'kafka:9092',
     topic: process.env.KAFKA_TOPIC || 'iot-sensor-data',
     options: {
       autoCommit: true,

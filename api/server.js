@@ -10,13 +10,15 @@ const { Server }    = require('socket.io');
 const format        = require('pg-format');
 const Papa          = require('papaparse');
 const promClient    = require('prom-client');
+const DEFAULT_DEVICE_LABEL   = process.env.DEFAULT_DEVICE_LABEL || 'Demo Sensor';
+
 
 const { pool }               = require('./db');
 const { startKafkaConsumer } = require('./kafka-consumer');
 
 ////////////////////////////////////////////////////////////////////////////////
 // 1️⃣ Prometheus instrumentation
-
+    
 const register = new promClient.Registry();
 promClient.collectDefaultMetrics({ register, prefix: 'iot_api_' });
 
@@ -71,21 +73,41 @@ app.get('/metrics', async (req, res) => {
 ////////////////////////////////////////////////////////////////////////////////
 // 5️⃣ Public APIs
 
-app.post('/api/generate-token', (req, res) => {
+app.post('/api/generate-token', async (req, res) => {
   const masterKey = req.headers['x-master-key'];
   if (masterKey !== process.env.MASTER_KEY) {
     return res.status(403).json({ error: 'Forbidden' });
   }
+
   const { tenant_id } = req.body;
   if (!tenant_id) {
     return res.status(400).json({ error: 'tenant_id is required' });
   }
+
+  // 3.1️⃣ Sign the JWT
   const token = jsonwebtoken.sign(
     { sub: `user-${tenant_id}`, tenant_id },
     process.env.JWT_SECRET,
     { expiresIn: '1h' }
   );
-  res.json({ token });
+
+  // 3.2️⃣ Ensure at least one device exists for this tenant
+  const defaultDeviceId    = `${tenant_id}-sensor-1`;
+  const defaultDeviceLabel = process.env.DEFAULT_DEVICE_LABEL || 'Demo Sensor';
+
+  try {
+    await pool.query(
+      `INSERT INTO devices (device_id, tenant_id, label)
+         VALUES ($1, $2, $3)
+      ON CONFLICT (device_id, tenant_id) DO NOTHING;`,
+      [defaultDeviceId, tenant_id, defaultDeviceLabel]
+    );
+    console.log(`[API] ensured default device for tenant=${tenant_id}`);
+  } catch (err) {
+    console.error(`[API] failed to insert default device: ${err.message}`);
+  }
+
+  return res.json({ token });
 });
 
 app.get('/api/tenants', async (req, res) => {
@@ -97,10 +119,11 @@ app.get('/api/tenants', async (req, res) => {
     `);
     res.json(rows.map(r => r.tenant_id));
   } catch (e) {
-    console.error('GET /api/tenants error:', e.message);
+    console.error(`GET /api/tenants error: ${e.message}`);
     res.status(500).json({ error: 'Could not fetch tenants' });
   }
 });
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // 6️⃣ Auth middleware with JWT
@@ -114,6 +137,18 @@ app.use(jwt({
     return h && h.startsWith('Bearer ') ? h.slice(7) : null;
   },
 }));
+
+app.use(async (req, res, next) => {
+  try {
+    const tenantId = req.user.tenant_id;
+    await pool.query(format("SET app.tenant_id = %L", tenantId));
+    next();
+  } catch (e) {
+    console.error(`Auth/RLS error: ${e.message}`);
+    res.status(401).json({ error: 'Unauthorized' });
+  }
+});
+
 
 app.use(async (req, res, next) => {
   try {
