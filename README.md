@@ -257,25 +257,28 @@ Next Steps: full GitOps CI/CD, secrets management, production‑grade Helm chart
 
 # Where Kafka Fits in the Pipeline
 
-```
-[Simulator or Real Device]
-         │ MQTT → EMQX
-         ↘
-   [Bridge Service]
-         │ PRODUCE → Kafka “iot-sensor-data” topic
-         │
- ┌───────┴─────────┐
- │                 │
- ▼                 ▼
-Raw Consumer    Aggregator
-(writes raw     (computes
- readings to    and writes
-  TimescaleDB)  aggregates)
-   │                 │
-   └┬────────────────┘
-    └─> API Layer (Socket.IO & REST)  
-      serves live & historical charts
-
+```mermaid
+graph TD
+    A[Simulator or Real Device] -->|MQTT| B[EMQX Broker]
+    B --> C[Bridge Service]
+    C -->|PRODUCE| D[Kafka iot-sensor-data topic]
+    D --> E[Raw Consumer]
+    D --> F[Aggregator]
+    E -->|writes raw readings| G[TimescaleDB]
+    F -->|computes and writes aggregates| H[TimescaleDB]
+    G --> I[API Layer]
+    H --> I
+    I[API Layer\nSocket.IO & REST] -->|serves| J[Live & Historical Charts]
+    
+    classDef process fill:#d4f1f9,stroke:#333;
+    classDef db fill:#05445e,stroke:#fff,color:#fff;
+    classDef queue fill:#75e6da,stroke:#333;
+    classDef api fill:#3a0ca3,stroke:#fff,color:#fff;
+    
+    class A,B,C,E,F process;
+    class D queue;
+    class G,H db;
+    class I api;
 ```
 
 Bridge (bridge/subscriber.js) takes incoming MQTT messages and publishes them into Kafka.
@@ -290,20 +293,18 @@ By using Kafka, we ensure each step is loosely coupled, fault-tolerant, and hori
 
 # Putting It All Together
 
+```mermaid
+graph TD
+    A[Device/Simulator] -->|MQTT| B[EMQX Broker]
+    B -->|bridge| C[Kafka topic iot-sensor-data]
+    C --> D[Raw Consumer]
+    C --> E[Aggregator]
+    D --> F[TimescaleDB raw]
+    E --> G[TimescaleDB aggregates]
+    F --> H[Express/Sockets API]
+    G --> H
+    H --> I[Next.js Dashboard]
 ```
-[Device/Simulator] 
-    → (MQTT) 
-[EMQX Broker] 
-    → (bridge) 
-[Kafka topic “iot-sensor-data”]
-    ↙             ↘
-[Raw Consumer]   [Aggregator]
-    ↓               ↓
-[TimescaleDB raw] [TimescaleDB aggregates]
-    ↘               ↙
-[Express/Sockets API] → [Next.js Dashboard]
-```
-
 Every piece has its job:
 
      EMQX for device-friendly ingestion
