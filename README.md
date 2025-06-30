@@ -31,7 +31,7 @@ IoT Pulse is a cloud-native platform that ingests simulated IoT sensor data (tem
 ## 🌐 High-Level Architecture  
 
 ```mermaid
-
+graph LR
     A[Edge Simulator] -->|MQTT| B(EMQX Broker)
     B -->|Kafka Connector| C[Apache Kafka]
     C --> D[Stream Processor]
