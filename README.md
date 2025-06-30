@@ -270,9 +270,9 @@ graph TD
     H --> I
     I[API Layer\nSocket.IO & REST] -->|serves| J[Live & Historical Charts]
     
-    classDef process fill:#f9dcd4,stroke:#111;
+    classDef process fill:#d4f1f9,stroke:#333,color:#000;
     classDef db fill:#05445e,stroke:#fff,color:#fff;
-    classDef queue fill:#75e6da,stroke:#333;
+    classDef queue fill:#75e6da,stroke:#333,color:#000;
     classDef api fill:#3a0ca3,stroke:#fff,color:#fff;
     
     class A,B,C,E,F process;
@@ -280,7 +280,6 @@ graph TD
     class G,H db;
     class I api;
 ```
-
 Bridge (bridge/subscriber.js) takes incoming MQTT messages and publishes them into Kafka.
 
 Raw Consumer (consumer/kafka-consumer.js) subscribes to the same topic and persists each reading in TimescaleDB.
