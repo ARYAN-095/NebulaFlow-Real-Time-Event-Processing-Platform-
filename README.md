@@ -72,26 +72,26 @@ graph LR
 
 
 ```mermaid
-[Simulator / Real Sensor]
-         │ MQTT
-         ▼
-      [EMQX Broker]
-         │
-         ▼
- [Bridge Service] ──▶ Apache Kafka ──▶
-         │                              ├─ [Consumer] → TimescaleDB (raw)
-         │                              └─ [Aggregator] → TimescaleDB (aggregates)
-         ▼
-    [Socket.IO / API]
-         │ REST & WebSocket
-         ▼
-  [Next.js Dashboard] ←→ [DeviceManager UI]
-         ▲
-         └──── CSV Export
-         
-[Prometheus] ← /metrics ─ [API, Aggregator, Bridge]
-[Grafana] visualizes Prometheus & TimescaleDB data
-[SlackAlerts] monitors aggregates threshold breaches
+graph TD
+    Simulator["Simulator / Real Sensor"] -->|MQTT| EMQX[EMQX Broker]
+    EMQX --> Bridge[Bridge Service]
+    Bridge --> Kafka[Apache Kafka]
+    Kafka --> Consumer[Consumer]
+    Kafka --> Aggregator[Aggregator]
+    Consumer --> TimescaleRaw[TimescaleDB (raw)]
+    Aggregator --> TimescaleAgg[TimescaleDB (aggregates)]
+    Bridge --> Socket[Socket.IO / API]
+    Socket -->|REST & WebSocket| Dashboard[Next.js Dashboard]
+    Dashboard <--> DeviceManager[DeviceManager UI]
+    Dashboard --> CSV[CSV Export]
+    
+    API -.-> Prometheus[Prometheus]
+    Aggregator -.-> Prometheus
+    Bridge -.-> Prometheus
+    Prometheus --> Grafana[Grafana]
+    TimescaleRaw --> Grafana
+    TimescaleAgg --> Grafana
+    Aggregator --> Slack[SlackAlerts]
 ```
  
 # 📦 Tech Stack
