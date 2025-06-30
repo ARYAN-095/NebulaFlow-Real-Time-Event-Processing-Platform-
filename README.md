@@ -270,7 +270,7 @@ graph TD
     H --> I
     I[API Layer\nSocket.IO & REST] -->|serves| J[Live & Historical Charts]
     
-    classDef process fill:#d4f1f9,stroke:#333;
+    classDef process fill:#f9dcd4,stroke:#111;
     classDef db fill:#05445e,stroke:#fff,color:#fff;
     classDef queue fill:#75e6da,stroke:#333;
     classDef api fill:#3a0ca3,stroke:#fff,color:#fff;
