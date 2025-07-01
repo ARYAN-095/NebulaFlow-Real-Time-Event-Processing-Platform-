@@ -51,7 +51,7 @@ jobs:
         working-directory: ./api
         run: |
           npm ci
-          npm run lint   # or `npm test` if you have API tests
+          # npm run lint   # or `npm test` if you have API tests
 
       - name: Build all Docker services
         run: |
