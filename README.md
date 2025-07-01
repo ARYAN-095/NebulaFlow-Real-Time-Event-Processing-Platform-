@@ -73,25 +73,25 @@ graph LR
 
 ```mermaid
 graph TD
-    Simulator["Simulator / Real Sensor"] -->|MQTT| EMQX[EMQX Broker]
-    EMQX --> Bridge[Bridge Service]
-    Bridge --> Kafka[Apache Kafka]
-    Kafka --> Consumer[Consumer]
-    Kafka --> Aggregator[Aggregator]
-    Consumer --> TimescaleRaw[TimescaleDB (raw)]
-    Aggregator --> TimescaleAgg[TimescaleDB (aggregates)]
-    Bridge --> Socket[Socket.IO / API]
-    Socket -->|REST & WebSocket| Dashboard[Next.js Dashboard]
-    Dashboard <--> DeviceManager[DeviceManager UI]
-    Dashboard --> CSV[CSV Export]
+    A[Simulator/Real Sensor] -->|MQTT| B[EMQX Broker]
+    B --> C[Bridge Service]
+    C --> D[Apache Kafka]
+    D --> E[Consumer]
+    D --> F[Aggregator]
+    E --> G[TimescaleDB raw]
+    F --> H[TimescaleDB aggregates]
+    C --> I[Socket.IO/API]
+    I -->|REST & WebSocket| J[Next.js Dashboard]
+    J <--> K[DeviceManager UI]
+    J --> L[CSV Export]
     
-    API -.-> Prometheus[Prometheus]
-    Aggregator -.-> Prometheus
-    Bridge -.-> Prometheus
-    Prometheus --> Grafana[Grafana]
-    TimescaleRaw --> Grafana
-    TimescaleAgg --> Grafana
-    Aggregator --> Slack[SlackAlerts]
+    I -. /metrics .-> M[Prometheus]
+    F -. /metrics .-> M
+    C -. /metrics .-> M
+    M --> N[Grafana]
+    G --> N
+    H --> N
+    F --> O[SlackAlerts]
 ```
  
 # 📦 Tech Stack
@@ -257,27 +257,29 @@ Next Steps: full GitOps CI/CD, secrets management, production‑grade Helm chart
 
 # Where Kafka Fits in the Pipeline
 
+```mermaid
+graph TD
+    A[Simulator or Real Device] -->|MQTT| B[EMQX Broker]
+    B --> C[Bridge Service]
+    C -->|PRODUCE| D[Kafka iot-sensor-data topic]
+    D --> E[Raw Consumer]
+    D --> F[Aggregator]
+    E -->|writes raw readings| G[TimescaleDB]
+    F -->|computes and writes aggregates| H[TimescaleDB]
+    G --> I[API Layer]
+    H --> I
+    I[API Layer\nSocket.IO & REST] -->|serves| J[Live & Historical Charts]
+    
+    classDef process fill:#d4f1f9,stroke:#333,color:#000;
+    classDef db fill:#05445e,stroke:#fff,color:#fff;
+    classDef queue fill:#75e6da,stroke:#333,color:#000;
+    classDef api fill:#3a0ca3,stroke:#fff,color:#fff;
+    
+    class A,B,C,E,F process;
+    class D queue;
+    class G,H db;
+    class I api;
 ```
-[Simulator or Real Device]
-         │ MQTT → EMQX
-         ↘
-   [Bridge Service]
-         │ PRODUCE → Kafka “iot-sensor-data” topic
-         │
- ┌───────┴─────────┐
- │                 │
- ▼                 ▼
-Raw Consumer    Aggregator
-(writes raw     (computes
- readings to    and writes
-  TimescaleDB)  aggregates)
-   │                 │
-   └┬────────────────┘
-    └─> API Layer (Socket.IO & REST)  
-      serves live & historical charts
-
-```
-
 Bridge (bridge/subscriber.js) takes incoming MQTT messages and publishes them into Kafka.
 
 Raw Consumer (consumer/kafka-consumer.js) subscribes to the same topic and persists each reading in TimescaleDB.
@@ -290,20 +292,18 @@ By using Kafka, we ensure each step is loosely coupled, fault-tolerant, and hori
 
 # Putting It All Together
 
+```mermaid
+graph TD
+    A[Device/Simulator] -->|MQTT| B[EMQX Broker]
+    B -->|bridge| C[Kafka topic iot-sensor-data]
+    C --> D[Raw Consumer]
+    C --> E[Aggregator]
+    D --> F[TimescaleDB raw]
+    E --> G[TimescaleDB aggregates]
+    F --> H[Express/Sockets API]
+    G --> H
+    H --> I[Next.js Dashboard]
 ```
-[Device/Simulator] 
-    → (MQTT) 
-[EMQX Broker] 
-    → (bridge) 
-[Kafka topic “iot-sensor-data”]
-    ↙             ↘
-[Raw Consumer]   [Aggregator]
-    ↓               ↓
-[TimescaleDB raw] [TimescaleDB aggregates]
-    ↘               ↙
-[Express/Sockets API] → [Next.js Dashboard]
-```
-
 Every piece has its job:
 
      EMQX for device-friendly ingestion
