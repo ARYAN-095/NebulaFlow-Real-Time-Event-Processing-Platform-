@@ -55,4 +55,4 @@ jobs:
 
       - name: Build all Docker services
         run: |
-          docker-compose build --parallel
+          docker compose build --parallel
