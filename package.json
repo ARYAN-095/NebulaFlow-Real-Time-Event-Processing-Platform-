@@ -6,7 +6,8 @@
     "publish": "node simulator/publisher.js",
     "bridge": "node bridge/subscriber.js",
     "consume": "node consumer/kafka-consumer.js",
-    "server": "node api/server.js"
+    "server": "node api/server.js",
+    "test": "jest --passWithNoTests"
   },
   "keywords": [],
   "author": "",
@@ -37,5 +38,10 @@
     "socket.io-client": "^4.8.1",
     "swr": "^2.3.3",
     "yargs": "^16.2.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "jest": "^30.0.3",
+    "ts-jest": "^29.4.0"
   }
 }

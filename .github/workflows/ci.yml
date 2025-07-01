@@ -32,27 +32,36 @@ jobs:
           POSTGRES_DB: iot
 
     steps:
-      - name: Checkout code
+      - name: ⬇️ Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Node.js
+      - name: 🔧 Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
 
-      - name: Build & lint Dashboard
+      - name: 📦 Install deps & lint Dashboard
         working-directory: ./dashboard
         run: |
           npm ci
-          npm run lint
-          # npm test   ← add this if you have tests
+          # Optional: Uncomment if you have a lint script
+          # npm run lint
+          # Optional: Uncomment if you add dashboard tests
+          # npm test
 
-      - name: Build & test API
+      - name: 📦 Install deps & test API
         working-directory: ./api
         run: |
           npm ci
-          # npm run lint   # or `npm test` if you have API tests
+          # Optional: Uncomment if you have lint or tests here
+          # npm run lint
+          # npm test
 
-      - name: Build all Docker services
+      - name: 🧪 Run root tests (e.g., aggregator utils)
+        run: |
+          npm ci
+          npm test
+
+      - name: 🐳 Build all Docker services
         run: |
           docker compose build --parallel
