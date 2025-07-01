@@ -1,9 +1,8 @@
-// components/Navbar.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {jwtDecode} from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 
 type TokenPayload = {
   tenant_id: string;
@@ -20,7 +19,7 @@ export default function Navbar() {
       try {
         const payload = jwtDecode<TokenPayload>(token);
         setTenant(payload.tenant_id);
-      } catch (e) {
+      } catch {
         console.error('Invalid token');
       }
     }

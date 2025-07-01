@@ -26,20 +26,20 @@ export default function DeviceManager() {
   }, []);
 
   // Fetch devices once token is available
-  useEffect(() => {
-    if (!token) return;
-    (async () => {
-      try {
-        const res = await fetch(`${API_URL}/api/devices`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        setDevices(data);
-      } catch {
-        setError('Failed to fetch devices');
-      }
-    })();
-  }, [token]);
+ useEffect(() => {
+  if (!token) return;
+  (async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/devices`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setDevices(data);
+    } catch {
+      setError('Failed to fetch devices');
+    }
+  })();
+}, [token, API_URL]);
 
   const addDevice = async () => {
     if (!deviceId || !label) return;

@@ -128,6 +128,19 @@ services:
     volumes:
       - grafana-storage:/var/lib/grafana
 
+
+  frontend:
+    build:
+      context: .
+      dockerfile: dashboard/Dockerfile
+    ports:
+      - "8081:80"
+     
+    depends_on:
+      - api
+    networks:
+      - default
+
 volumes:
   timescale-data:
   grafana-storage:

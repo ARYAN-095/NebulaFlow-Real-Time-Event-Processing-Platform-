@@ -8,10 +8,10 @@ import {
 } from 'recharts';
 
 type Reading = { t: number; temp: number; hum: number };
-type Device  = { device_id: string; label: string };
+type Device = { device_id: string; label: string };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL!;
-const WS_URL  = process.env.NEXT_PUBLIC_WS_URL!;
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL!;
 
 let socket: Socket;
 
@@ -57,16 +57,21 @@ export default function LiveChart() {
       transports: ['websocket'],
     });
 
-    socket.on('connect_error', err => {
+    socket.on('connect_error', (err: Error) => {
       console.error('Socket error:', err.message);
     });
 
-    socket.on('new_reading', (msg: any) => {
+    socket.on('new_reading', (msg: {
+      deviceId: string;
+      timestamp: number;
+      temperature: number;
+      humidity: number;
+    }) => {
       if (msg.deviceId !== selectedDevice) return;
       const reading: Reading = {
         t: Number(msg.timestamp),
         temp: Number(msg.temperature),
-        hum:  Number(msg.humidity),
+        hum: Number(msg.humidity),
       };
       setData(prev => [...prev.slice(-99), reading]);
     });
@@ -76,12 +81,42 @@ export default function LiveChart() {
     };
   }, [selectedDevice, mode]);
 
-  if (error) return <p className="text-red-500">Error: {error.message}</p>;
+  const handleDownload = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No auth token');
 
-  // Build download URL
-  const downloadUrl = selectedDevice
-    ? `${API_URL}/api/aggregates?since=60&window=${mode === 'raw' ? '' : encodeURIComponent(mode === '1m' ? '1 minute' : '5 minute')}&device_id=${selectedDevice}&download=true`
-    : '';
+      const w = mode === '1m'
+        ? '1 minute'
+        : mode === '5m'
+        ? '5 minute'
+        : '';
+      const url = `${API_URL}/api/aggregates?since=60${
+        w ? `&window=${encodeURIComponent(w)}` : ''
+      }&device_id=${selectedDevice}&download=true`;
+
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+
+      const blob = await res.blob();
+      const filename = `aggregates_${selectedDevice}_${mode}.csv`;
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+    } catch (err: unknown) {
+      const e = err as Error;
+      console.error('CSV download error:', e);
+      alert(`Download error: ${e.message}`);
+    }
+  };
+
+  if (error) return <p className="text-red-500">Error: {error.message}</p>;
 
   return (
     <div className="space-y-4">
@@ -109,12 +144,12 @@ export default function LiveChart() {
           <div className="flex space-x-2">
             {[
               { key: 'raw', label: 'Raw' },
-              { key: '1m',  label: '1-min Avg' },
-              { key: '5m',  label: '5-min Avg' },
+              { key: '1m', label: '1-min Avg' },
+              { key: '5m', label: '5-min Avg' },
             ].map(opt => (
               <button
                 key={opt.key}
-                onClick={() => setMode(opt.key as any)}
+                onClick={() => setMode(opt.key as 'raw' | '1m' | '5m')}
                 className={`px-3 py-1 rounded ${
                   mode === opt.key
                     ? 'bg-blue-600 text-white'
@@ -127,51 +162,12 @@ export default function LiveChart() {
           </div>
 
           {/* Download CSV */}
-          // Inside your LiveChart component, replace the Download button:
-<button
-  onClick={async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No auth token');
-
-      // Build the same URL, minus download handling in browser
-      const w = mode === '1m'
-        ? '1 minute'
-        : mode === '5m'
-        ? '5 minute'
-        : '';
-      const url = `${API_URL}/api/aggregates?since=60${
-        w ? `&window=${encodeURIComponent(w)}` : ''
-      }&device_id=${selectedDevice}&download=true`;
-
-      // Fetch CSV with Authorization header
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error(`Download failed: ${res.status}`);
-
-      // Get the CSV as a blob
-      const blob = await res.blob();
-      // Construct a filename
-      const filename = `aggregates_${selectedDevice}_${mode}.csv`;
-      // Create a temporary anchor to trigger download
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(link.href);
-    } catch (err: any) {
-      console.error('CSV download error:', err);
-      alert(`Download error: ${err.message}`);
-    }
-  }}
-  className="ml-auto px-3 py-1 bg-green-600 text-white rounded"
->
-  Download CSV
-</button>
-
+          <button
+            onClick={handleDownload}
+            className="ml-auto px-3 py-1 bg-green-600 text-white rounded"
+          >
+            Download CSV
+          </button>
         </div>
       )}
 
@@ -215,11 +211,7 @@ export default function LiveChart() {
               {showTemp && (
                 <Line
                   dataKey="temp"
-                  name={
-                    mode === 'raw'
-                      ? 'Temp (°C)'
-                      : `${mode === '1m' ? '1-min' : '5-min'} Temp`
-                  }
+                  name={mode === 'raw' ? 'Temp (°C)' : `${mode}-avg Temp`}
                   stroke="#f97316"
                   dot={false}
                 />
@@ -227,11 +219,7 @@ export default function LiveChart() {
               {showHum && (
                 <Line
                   dataKey="hum"
-                  name={
-                    mode === 'raw'
-                      ? 'Hum (%)'
-                      : `${mode === '1m' ? '1-min' : '5-min'} Hum`
-                  }
+                  name={mode === 'raw' ? 'Hum (%)' : `${mode}-avg Hum`}
                   stroke="#3b82f6"
                   dot={false}
                 />
