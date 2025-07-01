@@ -208,7 +208,7 @@ project-root/
 │   └─ pages/…
 ├─ docker-compose.yml
 |- Dockerfile
-├─ .env             # env vars (DB, Kafka, JWT_SECRET, MASTER_KEY, SLACK_TOKEN,..)
+├─ .env             # env  (DB, Kafka, JWT_SECRET, MASTER_KEY, SLACK_TOKEN,..)
 └─ README.md
 ```
 
