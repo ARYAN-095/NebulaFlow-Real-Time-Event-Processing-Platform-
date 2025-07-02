@@ -5,8 +5,7 @@
 ---
 
 ## Project Overview
-  NebulaFlow is a modern, real-time event processing platform designed to collect and analyze IoT sensor data at scale. It features a robust pipeline that ingests multi-tenant sensor streams via MQTT and processes them through an Apache Kafka backbone. Streaming data is consumed in real-time, aggregated, and stored in TimescaleDB for historical analysis. The platform provides instant insights through Grafana dashboards and secures all API endpoints with JSON Web Tokens (JWT). With Docker-based containerization and built-in CI/CD, NebulaFlow is fully Docker-ready and CI/CD-enabled for seamless deployment.
------------------------------------------------------------------------------------
+NebulaFlow is a modern, real-time event processing platform designed to collect and analyze IoT sensor data at scale. It features a robust pipeline that ingests multi-tenant sensor streams via MQTT and    processes them through an Apache Kafka backbone. Streaming data is consumed in real-time, aggregated, and stored in TimescaleDB for historical analysis. The platform provides instant insights through Grafana dashboards and secures all API endpoints with JSON Web Tokens (JWT). With Docker-based containerization and built-in CI/CD, NebulaFlow is fully Docker-ready and CI/CD-enabled for seamless deployment.
 
  
 ## ✨ Key Features
