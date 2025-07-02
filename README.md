@@ -1,4 +1,5 @@
 # NebulaFlow: Real-Time Event Processing Platform  
+[![CI](https://github.com/ARYAN-095/NebulaFlow-Real-Time-Event-Processing-Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/ARYAN-095/NebulaFlow-Real-Time-Event-Processing-Platform/actions)
  
 *A scalable platform for ingesting, processing, and visualizing IoT sensor data in real time.*
 
