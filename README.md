@@ -1,5 +1,4 @@
 # NebulaFlow: Real-Time Event Processing Platform  
-[![CI](https://github.com/ARYAN-095/NebulaFlow-Real-Time-Event-Processing-Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/ARYAN-095/NebulaFlow-Real-Time-Event-Processing-Platform/actions)
  
 *A scalable platform for ingesting, processing, and visualizing IoT sensor data in real time.*
 
@@ -11,13 +10,13 @@ NebulaFlow is a modern, real-time event processing platform designed to collect 
  
 ## ✨ Key Features
 
-- 🏢 **Multi-Tenant Ingestion**  
+-  **Multi-Tenant Ingestion**  
   Supports multiple clients/organizations with isolated data streams via MQTT topic segmentation.
 
-- ⚡ **Real-Time Processing**  
+- **Real-Time Processing**  
   Instant streaming of MQTT data to Apache Kafka pipelines for low-latency processing.
 
-- 🔄 **Stream Aggregation**  
+-  **Stream Aggregation**  
   Custom Kafka consumers perform on-the-fly event aggregation (metrics/summaries).
 
 - **Interactive Dashboard**
@@ -26,22 +25,22 @@ NebulaFlow is a modern, real-time event processing platform designed to collect 
 - **Durable Storage** 
   Raw sensor_data + 1‑min/5‑min aggregates in TimescaleDB
   
-- 🗄️ **Time-Series Storage**  
+-  **Time-Series Storage**  
   TimescaleDB (PostgreSQL) optimized for high-performance time-series data operations.
 
-- 🔐 **Secure APIs**  
+- **Secure APIs**  
   RESTful endpoints protected with JWT authentication and role-based access control.
 
-- 📊 **Observability**  
+-  **Observability**  
   Pre-configured Grafana dashboards for real-time sensor telemetry and system health.
 
 -  **CSV Export**
     Download raw or aggregated series
 
-- 🐳 **Containerized Deployment**  
+-  **Containerized Deployment**  
   Fully Dockerized stack with Compose for consistent environments (dev→prod).
 
-- 🤖 **Automated CI/CD**  
+- **Automated CI/CD**  
   GitHub Actions pipelines for seamless build, test, and deployment workflows.
 
 
@@ -69,7 +68,7 @@ NebulaFlow is a modern, real-time event processing platform designed to collect 
   TSDB --> Graf
   AGG --> Graf
 ```
-<<<<<<< HEAD
+ 
  
 
 - NebulaFlow’s architecture integrates the following components:
@@ -81,9 +80,9 @@ NebulaFlow is a modern, real-time event processing platform designed to collect 
 - **REST API**: Provides access to processed data with JWT-based security.
 
 
-=======
+ 
 ---------------------------------------------------------------------------------------------------------------------------
->>>>>>> 7a71edf3ba9cb0c6fa512017c48ba9baaf65828e
+ 
 
 # 🏗️ Architecture Overview
 
@@ -165,13 +164,13 @@ graph TD
     class G,H db;
     class I api;
 ```
-Bridge (bridge/subscriber.js) takes incoming MQTT messages and publishes them into Kafka.
+- **Bridge** (bridge/subscriber.js) takes incoming MQTT messages and publishes them into Kafka.
 
-Raw Consumer (consumer/kafka-consumer.js) subscribes to the same topic and persists each reading in TimescaleDB.
+- **Raw Consumer** (consumer/kafka-consumer.js) subscribes to the same topic and persists each reading in TimescaleDB.
 
-Aggregator (aggregator/index.js) also subscribes, buffers messages for a minute or five, computes averages, and writes those aggregates back to TimescaleDB for efficient querying by the dashboard.
+- **Aggregator** (aggregator/index.js) also subscribes, buffers messages for a minute or five, computes averages, and writes those aggregates back to TimescaleDB for efficient querying by the dashboard.
 
-By using Kafka, we ensure each step is loosely coupled, fault-tolerant, and horizontally scalable.
+- By using Kafka, we ensure each step is loosely coupled, fault-tolerant, and horizontally scalable.
 
 
 
@@ -199,10 +198,8 @@ Every piece has its job:
 
      API & Dashboard for secure, live visualizations
 
-
-
---------------------------------------------------------------------------------------------------------------
-----------------------------------------------------------------------------------------------------------
+-----------------------------------------------------
+ <br> 
 
 # 📝 Project Structure
 
@@ -245,11 +242,11 @@ project-root/
 
 
 #  Prerequisites
-Docker & Docker‑Compose
+  - Docker & Docker‑Compose
 
-(Locally) Node.js ≥ 18, npm
+  - (Locally) Node.js ≥ 18, npm
 
-(Optional) MQTT tool / real sensors
+  - (Optional) MQTT tool / real sensors
 
 
 # ⚙️ Quick Start (Docker)
@@ -272,9 +269,9 @@ Docker & Docker‑Compose
  3. Start the core services
     ```
     docker-compose up -d api timescaledb zookeeper kafka emqx
-   ```
+    ```
 
-  3. Initialize Kafka topic (auto‑create enabled)
+  4. Initialize Kafka topic (auto‑create enabled)
 
   ```
   docker exec -it nebulaflow-real-time-event-processing-platform--kafka-1 `
@@ -286,7 +283,7 @@ Docker & Docker‑Compose
 
   ```
 
-  4. Start the supporting microservices
+ 5. Start the supporting microservices
 
      ```
      docker-compose up -d \
@@ -294,21 +291,20 @@ Docker & Docker‑Compose
      consumer \
      aggregator \
      alerter
-     ```
-
-   5. Start the dashboard frontend
-     ```
-     docker-compose up -d frontend
-
     ```
 
-    6. Verify everything is up
+   6. Start the dashboard frontend
+     ```
+     docker-compose up -d frontend
+     ```
+
+  7. Verify everything is up
       ```
       docker-compose ps
       ```
 
 
-    7. Simulate some data
+   8. Simulate some data
          - Generate a tenant JWT
             ```
             curl -X POST http://localhost:5000/api/generate-token \
@@ -317,12 +313,12 @@ Docker & Docker‑Compose
               -d '{"tenant_id":"tenant-1"}'
             ```
 
-          - Copy the returned token into an env var:
+         - Copy the returned token into an env var:
              ```
              export SIM_TOKEN=<your_jwt_here>
              ```
 
-          - Start the simulator (round‑robin through each registered device)
+         - Start the simulator (round‑robin through each registered device)
             ```
             docker-compose exec simulator \
             node publisher.js --tenant tenant-1
@@ -331,7 +327,7 @@ Docker & Docker‑Compose
 
   
   
-   ## 8.  Access Services
+   ##  9.  Access Services
 
 | Service            | URL                          | Badges & Notes                        |
 |--------------------|------------------------------|---------------------------------------|
@@ -342,18 +338,35 @@ Docker & Docker‑Compose
 | **Prometheus**     | [http://localhost:9090](http://localhost:9090) | ![Prometheus](https://img.shields.io/badge/Metrics-All-green) Scrape interval: 15s |
 
   
-
+---
   ### 🔍 Quick Access Tips:
 - Clickable links work in GitHub's markdown renderer
 - Default ports can be changed in `.env` file
 - For production: Configure proper authentication in Grafana/Prometheus
 
 
-9. Log in & visualize
+## Log in & visualize
 
 Visit /login in the dashboard, select your tenant, sign in.
 
 Add devices, view real‑time & aggregated charts, download CSVs.
+
+---------
+
+## Multi‑Tenant Security
+   - Tenant JWTs
+
+        - POST /api/generate-token with master key → signed JWT { tenant_id }
+
+   - Row‑Level Security
+
+        - In Postgres: RLS policies ensure each tenant sees only its rows
+
+        - Express middleware runs SET app.tenant_id = '<tenant>' per request
+
+   - Frontend
+
+        - Tenant dropdown at login → stores token → attaches to all requests
 
 
 ---------------------------------------------------------------------------------------------------------------------
@@ -383,21 +396,21 @@ Add devices, view real‑time & aggregated charts, download CSVs.
 
   2.  Local CI Simulation
 
-   ```
-   # 1. Lint & test dashboard
-  cd dashboard
-  npm ci && npm run lint && npm test
+   
+    # 1. Lint & test dashboard
+        cd dashboard
+        npm ci && npm run lint && npm test
 
-  # 2. Lint & test API
-  cd ../api
-  npm ci && npm run lint && npm test
+    # 2. Lint & test API
+      cd ../api
+      npm ci && npm run lint && npm test
 
-  # 3. Build all containers
-  cd ..
+    # 3. Build all containers
+       cd ..
        docker-compose build --parallel
-    ```
+   
 
-  3. Branch Protection & Merge Strategy
+ 3. Branch Protection & Merge Strategy
      - **Branch:** main is protected—requires passing CI and at least one PR approval.
 
      - **Releases:** Tag releases as vX.Y.Z to mark production‑ready versions.
@@ -408,20 +421,31 @@ Add devices, view real‑time & aggregated charts, download CSVs.
 
 
 
-# 📊 Observability
+# 📊 Observability & Monitoring
 
-   /metrics exposes Prometheus metrics: HTTP request counts & latencies, process stats
+  1. Prometheus Metrics
 
-   Grafana dashboards visualize end‑to‑end throughput, p95 latencies, consumer lag
+       - iot_api_http_requests_total & iot_api_http_request_duration_seconds
 
-   Slack alerts for aggregate thresholds via alerter.js
+       - Node process metrics (process_cpu_*, memory_bytes, etc.)
+
+  2.  Grafana Dashboards
+
+       - Real‑time request rate, p95 latencies, consumer lag
+
+       - System health panels (CPU, memory)
+
+  3. Alerts
+
+       - High HTTP error rate, consumer lag thresholds → Slack/PagerDuty
   
 # 🤝 Contributing
 
-   Fork & branch (feature/xyz)
+We love contributions! Here's how to get started:
 
-   Code, test, lint
-
-   Open PR against main
-
-   Review, merge, and celebrate! 🎉
+```diff
++ 1. Fork the repository and create your branch from `main` (preferably with a descriptive name like `feature/xyz`)
++ 2. Make your changes with clear, well-commented code
++ 3. Write tests for new functionality
++ 4. Run linters and tests (check our CI workflow for commands)
++ 5. Open a Pull Request against the `main` branch
