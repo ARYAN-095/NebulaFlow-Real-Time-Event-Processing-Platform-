@@ -69,6 +69,7 @@
   TSDB --> Graf
   AGG --> Graf
 ```
+<<<<<<< HEAD
  
 
 - NebulaFlow’s architecture integrates the following components:
@@ -80,6 +81,9 @@
 - **REST API**: Provides access to processed data with JWT-based security.
 
 
+=======
+---------------------------------------------------------------------------------------------------------------------------
+>>>>>>> 7a71edf3ba9cb0c6fa512017c48ba9baaf65828e
 
 # 🏗️ Architecture Overview
 
