@@ -4,46 +4,48 @@
 
 ---
 
-## 🚀 Introduction
-IoT Pulse is a cloud-native platform that ingests simulated IoT sensor data (temperature, humidity), processes it in real time, computes live metrics, triggers alerts, and powers a dynamic dashboard. Ideal for smart-building demos, it showcases end-to-end event-driven architecture with enterprise-grade scalability.
+## Project Overview
+  NebulaFlow is a modern, real-time event processing platform designed to collect and analyze IoT sensor data at scale. It features a robust pipeline that ingests multi-tenant sensor streams via MQTT and processes them through an Apache Kafka backbone. Streaming data is consumed in real-time, aggregated, and stored in TimescaleDB for historical analysis. The platform provides instant insights through Grafana dashboards and secures all API endpoints with JSON Web Tokens (JWT). With Docker-based containerization and built-in CI/CD, NebulaFlow is fully Docker-ready and CI/CD-enabled for seamless deployment.
+-----------------------------------------------------------------------------------
 
----
+ 
+## ✨ Key Features
 
-#  Key Features
+- 🏢 **Multi-Tenant Ingestion**  
+  Supports multiple clients/organizations with isolated data streams via MQTT topic segmentation.
 
-  -> Multi‑Tenant Security via JWT + Postgres Row‑Level Security
+- ⚡ **Real-Time Processing**  
+  Instant streaming of MQTT data to Apache Kafka pipelines for low-latency processing.
 
-  -> Real‑Time Streaming: MQTT → EMQX → Kafka → Socket.IO → Browser
+- 🔄 **Stream Aggregation**  
+  Custom Kafka consumers perform on-the-fly event aggregation (metrics/summaries).
 
-  -> Durable Storage: Raw sensor_data + 1‑min/5‑min aggregates in TimescaleDB
+- **Interactive Dashboard**
+  Next.js frontend with live & historical charts
 
-  -> Interactive Dashboard: Next.js frontend with live & historical charts
+- **Durable Storage** 
+  Raw sensor_data + 1‑min/5‑min aggregates in TimescaleDB
+  
+- 🗄️ **Time-Series Storage**  
+  TimescaleDB (PostgreSQL) optimized for high-performance time-series data operations.
 
-  -> Device Management: Onboard/decommission devices per tenant
+- 🔐 **Secure APIs**  
+  RESTful endpoints protected with JWT authentication and role-based access control.
 
-  -> CSV Export: Download raw or aggregated series
+- 📊 **Observability**  
+  Pre-configured Grafana dashboards for real-time sensor telemetry and system health.
 
-  -> Observability: Prometheus metrics, Grafana dashboards, Slack alerts
+-  **CSV Export**
+    Download raw or aggregated series
 
-  -> CI/CD & Containerization: Dockerized services, single docker-compose up
+- 🐳 **Containerized Deployment**  
+  Fully Dockerized stack with Compose for consistent environments (dev→prod).
+
+- 🤖 **Automated CI/CD**  
+  GitHub Actions pipelines for seamless build, test, and deployment workflows.
 
 
-## 🌐 High-Level Architecture  
-
-```mermaid
-graph LR
-    A[Edge Simulator] -->|MQTT| B(EMQX Broker)
-    B -->|Kafka Connector| C[Apache Kafka]
-    C --> D[Stream Processor]
-    D --> E[Aggregation Microservice]
-    E --> F[TimescaleDB]
-    F --> G[API Service]
-    G --> H[Dashboard]
-    D --> I[Alerting Service]
-    I --> J[Prometheus]
-    J --> K[Slack/Email]
-```
-
+# 🌐 High-Level Architecture  
 
 ```mermaid
     flowchart LR
@@ -67,6 +69,17 @@ graph LR
   TSDB --> Graf
   AGG --> Graf
 ```
+ 
+
+- NebulaFlow’s architecture integrates the following components:
+- **MQTT Broker**: Receives real-time sensor events from multiple tenants.
+- **Kafka**: Streams data reliably across the pipeline.
+- **Kafka Consumer Service**: Processes and aggregates incoming messages.
+- **TimescaleDB**: Persists time-series metrics with efficient querying.
+- **Grafana**: Visualizes data and metrics in dashboards.
+- **REST API**: Provides access to processed data with JWT-based security.
+
+
 
 # 🏗️ Architecture Overview
 
@@ -94,7 +107,7 @@ graph TD
     F --> O[SlackAlerts]
 ```
  
-## 🛠 Tech Stack
+# 🛠 Tech Stack
 
 | Component          | Technology                     | Role/Usage                                  |
 |--------------------|--------------------------------|---------------------------------------------|
@@ -187,71 +200,6 @@ Every piece has its job:
 --------------------------------------------------------------------------------------------------------------
 ----------------------------------------------------------------------------------------------------------
 
-# 🔧 Prerequisites
-Docker & Docker‑Compose
-
-(Locally) Node.js ≥ 18, npm
-
-(Optional) MQTT tool / real sensors
-
-
-# ⚙️ Quick Start (Docker)
-
-  1. Clone & configure
-
-  ```
-  git clone https://github.com/your-org/NebulaFlow.git
-  cd NebulaFlow
-  cp .env.example .env          # Fill in DB/Kafka/Slack credentials
-  ```
-
-  2. Build & spin up all services
-   ```
-   docker-compose up --build -d
-
-   ```
-
-  3. Initialize Kafka topic (auto‑create enabled)
-
-  ```
-  # By default, topics will auto‑create on broker, otherwise:
-  docker exec -it kafka kafka-topics --create \
-  --topic iot-sensor-data --bootstrap-server kafka:9092 \
-  --partitions 3 --replication-factor 1
-  ```
-
- 4. Access services
-  
-  API: http://localhost:5000
-
-  Dashboard: http://localhost:3000
-
-  EMQX UI: http://localhost:18083 (default guest/guest)
-
-  Prometheus: http://localhost:9090
-
-   Grafana: http://localhost:3000 (anonymous)
-
- 5. Simulate data
-
-```
-   # Generate a tenant token:
-curl -X POST http://localhost:5000/api/generate-token \
-  -H "x-master-key: YOUR_MASTER_KEY" \
-  -d '{"tenant_id":"tenant-1"}'
-#  ➜ { token: "eyJ..." }
-export SIM_TOKEN=eyJ...
-docker-compose exec simulator node publisher.js --token $SIM_TOKEN
-```
-
-6. Log in & visualize
-
-Visit /login in the dashboard, select your tenant, sign in.
-
-Add devices, view real‑time & aggregated charts, download CSVs.
-
-
-
 # 📝 Project Structure
 
 ```
@@ -290,30 +238,186 @@ project-root/
 └─ README.md
 ```
 
+
+
+#  Prerequisites
+Docker & Docker‑Compose
+
+(Locally) Node.js ≥ 18, npm
+
+(Optional) MQTT tool / real sensors
+
+
+# ⚙️ Quick Start (Docker)
+
+  1. Clone & configure
+
+  ```
+  git clone https://github.com/your-org/NebulaFlow.git
+  cd NebulaFlow
+  cp .env.example .env          # Fill in DB/Kafka/Slack credentials
+  ```
+
+  2. Build all images
+
+   ```
+   docker-compose build --parallel
+
+   ```
+ 
+ 3. Start the core services
+    ```
+    docker-compose up -d api timescaledb zookeeper kafka emqx
+   ```
+
+  3. Initialize Kafka topic (auto‑create enabled)
+
+  ```
+  docker exec -it nebulaflow-real-time-event-processing-platform--kafka-1 `
+  kafka-topics --create `
+  --bootstrap-server localhost:9092 `
+  --replication-factor 1 `
+  --partitions 1 `
+  --topic iot-sensor-data
+
+  ```
+
+  4. Start the supporting microservices
+
+     ```
+     docker-compose up -d \
+     bridge \
+     consumer \
+     aggregator \
+     alerter
+     ```
+
+   5. Start the dashboard frontend
+     ```
+     docker-compose up -d frontend
+
+    ```
+
+    6. Verify everything is up
+      ```
+      docker-compose ps
+      ```
+
+
+    7. Simulate some data
+         - Generate a tenant JWT
+            ```
+            curl -X POST http://localhost:5000/api/generate-token \
+              -H "Content-Type: application/json" \
+              -H "x-master-key: $MASTER_KEY" \
+              -d '{"tenant_id":"tenant-1"}'
+            ```
+
+          - Copy the returned token into an env var:
+             ```
+             export SIM_TOKEN=<your_jwt_here>
+             ```
+
+          - Start the simulator (round‑robin through each registered device)
+            ```
+            docker-compose exec simulator \
+            node publisher.js --tenant tenant-1
+            ```
+
+
+  
+  
+   ## 8.  Access Services
+
+| Service            | URL                          | Badges & Notes                        |
+|--------------------|------------------------------|---------------------------------------|
+| **REST API**       | [http://localhost:5000](http://localhost:5000) | ![JWT](https://img.shields.io/badge/Auth-JWT-orange) `Content-Type: application/json` |
+| **Dashboard**      | [http://localhost:8081](http://localhost:8081) | ![Next.js](https://img.shields.io/badge/Framework-Next.js-black) `/login` required |
+| **EMQX**           | [http://localhost:18083](http://localhost:18083) | ![MQTT](https://img.shields.io/badge/Protocol-MQTT-blue) Admin: `admin/public` |
+| **Grafana**        | [http://localhost:3000](http://localhost:3000) | ![Grafana](https://img.shields.io/badge/Version-10.3.3-orange) Anonymous view |
+| **Prometheus**     | [http://localhost:9090](http://localhost:9090) | ![Prometheus](https://img.shields.io/badge/Metrics-All-green) Scrape interval: 15s |
+
+  
+
+  ### 🔍 Quick Access Tips:
+- Clickable links work in GitHub's markdown renderer
+- Default ports can be changed in `.env` file
+- For production: Configure proper authentication in Grafana/Prometheus
+
+
+9. Log in & visualize
+
+Visit /login in the dashboard, select your tenant, sign in.
+
+Add devices, view real‑time & aggregated charts, download CSVs.
+
+
+---------------------------------------------------------------------------------------------------------------------
+
+
 # 🎯 CI/CD & Deployment
-GitHub Actions :
 
-Lint & Test on every PR
+   To ensure high code quality, fast feedback, and repeatable builds, we’ve set up a fully automated CI pipeline using GitHub Actions and Docker Compose. Here’s what you’ll see in the CI/CD section of the README:
 
-Build Docker images and push to registry
+   1. Workflow Overview
+      - Lint & Type‑Check
 
-Helm charts for Kubernetes deployment (EKS/GKE)
+      - Dashboard (Next.js) and API (Express) are both linted and type‑checked on every push/PR.
 
-Automated Rollouts and Canary Monitoring
+      - Unit Tests
+
+      - Runs Jest against your API and aggregation utility code (pass‑with‑no‑tests configured so you can adopt tests     
+      incrementally).
+
+      - Docker Build
+
+      - All service images (API, simulator, bridge, consumer, aggregator, alerter, frontend) are built in parallel to catch any build-time errors early.
+
+      - Artifact Publishing (Optional)
+
+      -    You can optionally push images to a container registry (e.g. GitHub Container Registry) for later deployment.
+
+  2.  Local CI Simulation
+
+   ```
+   # 1. Lint & test dashboard
+  cd dashboard
+  npm ci && npm run lint && npm test
+
+  # 2. Lint & test API
+  cd ../api
+  npm ci && npm run lint && npm test
+
+  # 3. Build all containers
+  cd ..
+       docker-compose build --parallel
+    ```
+
+  3. Branch Protection & Merge Strategy
+     - **Branch:** main is protected—requires passing CI and at least one PR approval.
+
+     - **Releases:** Tag releases as vX.Y.Z to mark production‑ready versions.
+
+     - **Feature Work:** Develop on feat/... branches; open PRs against main.
+
+
+
 
 
 # 📊 Observability
-/metrics exposes Prometheus metrics: HTTP request counts & latencies, process stats
 
-Grafana dashboards visualize end‑to‑end throughput, p95 latencies, consumer lag
+   /metrics exposes Prometheus metrics: HTTP request counts & latencies, process stats
 
-Slack alerts for aggregate thresholds via alerter.js
+   Grafana dashboards visualize end‑to‑end throughput, p95 latencies, consumer lag
 
+   Slack alerts for aggregate thresholds via alerter.js
+  
 # 🤝 Contributing
-Fork & branch (feature/xyz)
 
-Code, test, lint
+   Fork & branch (feature/xyz)
 
-Open PR against main
+   Code, test, lint
 
-Review, merge, and celebrate! 🎉
+   Open PR against main
+
+   Review, merge, and celebrate! 🎉
