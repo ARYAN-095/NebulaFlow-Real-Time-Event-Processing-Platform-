@@ -2,4 +2,5 @@ node_modules
 helper.txt
 .env
 node_modules
- 
+.env.prod
+api/.env

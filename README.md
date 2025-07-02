@@ -94,22 +94,19 @@ graph TD
     F --> O[SlackAlerts]
 ```
  
-# 📦 Tech Stack
---------------------------------------------------
-```
-Layer	                      Technology
----------------------------------------------
-Messaging            	MQTT (EMQX), Apache Kafka
-Time‑Series DB	      TimescaleDB (Postgres)
-API & Auth	         Node.js, Express, Socket.IO, JWT, RLS
-Aggregation	             Node.js Consumer & KafkaJS
-Alerting	               Slack Web API
-Frontend              	Next.js, React, SWR, Recharts
-Observability       	prom-client, express‑prom-bundle, Prometheus, Grafana
-Containerization	        Docker, Docker‑Compose
-```
+## 🛠 Tech Stack
 
-
+| Component          | Technology                     | Role/Usage                                  |
+|--------------------|--------------------------------|---------------------------------------------|
+| **Data Ingestion** | MQTT (EMQX)                    | Ingest multi-tenant sensor data             |
+| **Streaming**      | Apache Kafka                   | Real-time event streaming pipeline          |
+| **Backend API**    | Node.js (Express)              | Processes data and serves REST endpoints    |
+| **Database**       | TimescaleDB (PostgreSQL)       | Time-series data storage & aggregation      |
+| **Observability**  | Grafana, Prometheus            | Dashboards for real-time metrics            |
+| **Frontend**       | Next.js, React, SWR, Recharts  | frontend built in next.js
+| **Authentication** | JSON Web Tokens (JWT)          | Secures API access with token-based auth    |
+|**Containerization**| Docker & Docker Compose        | Local development and deployment orchestration |
+| **CI/CD**          | GitHub Actions                 | Automated build, test, and deployment      |
 
 # 🙋‍♂️ Talking Points
 ---------------------------------------------------------
